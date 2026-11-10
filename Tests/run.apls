@@ -1,0 +1,39 @@
+⍝ Runs every test suite (Tests/*Tests.apln) against APLSource.
+⍝
+⍝ Usage: dyalogscript Tests/run.apls [filter] [-slow]
+⍝   filter  run only tests whose "Suite test name" contains this text,
+⍝           ignoring case
+⍝   -slow   include tests listed in a suite's Slow variable
+⍝
+⍝ Exits with code 1 if a file fails to load, or any test fails or errors.
+
+⎕IO ⎕ML←1
+
+args←2 ⎕NQ'.' 'GetCommandLineArgs'
+testDir←⊃1 ⎕NPARTS⊃args
+root←⊃1 ⎕NPARTS ¯1↓testDir
+options←⎕NS''
+options.slow←(⊂'-slow')∊1↓args
+options.filter←{0=≢⍵:'' ⋄ ⊃⍵}(1↓args)~⊂'-slow'
+
+Files←{{⍵[⍋⍵]}⊆⊃0(⎕NINFO⍠1)⍵}
+
+loadErrors←0
+∇ ref←Load file
+  :Trap 0
+      ref←⊃⎕FIX'file://',file
+  :Else
+      ref←⍬
+      ⍞←'LOAD  ',file,': ',(⊃⎕DMX.DM),⎕UCS 10
+      loadErrors+←1
+  :EndTrap
+∇
+
+_←Load¨Files root,'APLSource/*.apln'
+_←Load¨testDir∘,¨'Tester.apln' 'Helpers.apln'
+suites←Load¨Files testDir,'*Tests.apln'
+suites←(0≠≢¨suites)/suites
+
+results←options Tester.Run suites
+failed←(0<loadErrors)∨Tester.Failed results
+⎕OFF(failed)

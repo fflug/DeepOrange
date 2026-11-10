@@ -1,0 +1,191 @@
+:Namespace Tester
+    ⍝ Unit testing framework.
+    ⍝
+    ⍝ A suite is a namespace. A test is a dfn whose name starts with test_.
+    ⍝ The runner calls every test as:  fixture test case
+    ⍝   fixture  result of the suite's optional Setup function, run once per
+    ⍝            suite; ⍬ when the suite has no Setup
+    ⍝   case     the case data for a parameterised test; ⍬ otherwise
+    ⍝
+    ⍝ Optional suite members:
+    ⍝   Setup              monadic function, called with ⍬
+    ⍝   <test>_cases       vector of (label data) pairs; the test runs once
+    ⍝                      per pair with data as ⍵
+    ⍝   Slow               vector of test names skipped unless slow is set
+    ⍝
+    ⍝ Tests run in alphabetical order of name and must not depend on each
+    ⍝ other. The fixture is shared by every test in the suite, so tests must
+    ⍝ treat it as read-only.
+
+    ⎕IO ⎕ML←1
+
+    FAIL_EN←777
+    PREFIX←'test_'
+
+    ⍝ Assertions
+    ⍝ Each assertion returns 1 on success, so a dfn test can end with one.
+    ⍝ On failure it signals FAIL_EN, which the runner reports as FAIL rather
+    ⍝ than ERROR.
+
+    Fail←{
+        ⍝ ⍵ ←→ failure message
+        ⎕SIGNAL⊂('EN' FAIL_EN)('Message'(,⍕⍵))
+    }
+
+    Eq←{
+        ⍝ ⍺ ←→ expected value
+        ⍝ ⍵ ←→ actual value
+        ⍺≡⍵:1
+        Fail'expected ',(Show ⍺),' but got ',Show ⍵
+    }
+
+    Ok←{
+        ⍝ ⍵ ←→ value that must be exactly 1
+        1≡⍵:1
+        Fail'expected 1 but got ',Show ⍵
+    }
+
+    Raises←{
+        ⍝ (fn Raises en) arg
+        ⍝ ⍺⍺ ←→ function under test
+        ⍝ ⍵⍵ ←→ expected error number
+        ⍝ ⍵  ←→ argument passed to ⍺⍺
+        fn←⍺⍺
+        got←{0::⎕DMX.EN ⋄ 0⊣fn ⍵}⍵
+        got≡⍵⍵:1
+        got≡0:Fail'expected error ',(⍕⍵⍵),' but no error was signalled'
+        Fail'expected error ',(⍕⍵⍵),' but got error ',⍕got
+    }
+
+    ⍝ Array notation serialiser. Interactive sessions provide it as
+    ⍝ ⎕SE.Dyalog.Array; dyalogscript starts with an empty ⎕SE, so it is
+    ⍝ loaded from the installation instead.
+    LoadArrayNotation←{
+        0::⎕FIX'file://',(2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'),'/StartupSession/Dyalog/Array.apln'
+        ⎕SE.Dyalog.Array
+    }
+    ArrayNotation←LoadArrayNotation ⍬
+
+    Show←{
+        ⍝ Single-line array notation, so shape and type differences are
+        ⍝ visible: (1⋄) vs 1, ⍬ vs '', '1' vs 1.
+        ⍝ The serialiser pads brackets with diamonds ([⋄1 2⋄3 4⋄]); those are
+        ⍝ removed outside string literals. Parentheses keep theirs, because
+        ⍝ (1⋄) is how a one-item vector is written.
+        s←⊃1 ArrayNotation.Serialise ⍵
+        '''[^'']*''' '\[⋄' '⋄\]'⎕R(,¨'&[]')⊢s
+    }
+
+    ⍝ Runner
+
+    Run←{
+        ⍝ ⍺ ←→ optional namespace: filter (text, default '') and slow (0/1, default 0)
+        ⍝ ⍵ ←→ suite reference, or vector of suite references
+        ⍝ ← ←→ results matrix, one row per test case:
+        ⍝      suite name, test name, status, message
+        ⍝      status is one of 'PASS' 'FAIL' 'ERROR' 'SKIP'
+        ⍺←()
+        (filter slow)←⍺ ⎕VGET('filter' '')('slow' 0)
+        results←⊃⍪/(⊂0 4⍴⊂''),(⊂filter slow)RunSuite¨,⍵
+        _←Report results
+        results
+    }
+
+    ∇ results←options RunSuite suite;filter;slow;names;fixture;setupError;name;cases;case;label;full;slowNames;sname
+      (filter slow)←options
+      sname←SuiteName suite
+      results←0 4⍴⊂''
+      names←{⍵/⍨(⊂PREFIX)≡¨(≢PREFIX)↑¨⍵}suite.⎕NL ¯3
+      names←names/⍨(⊂filter)Matches¨(⊂sname),¨'.',¨DisplayName¨names
+      →(0=≢names)⍴0
+      slowNames←{2=⍵.⎕NC'Slow':,⊆⍵.Slow ⋄ ⍬}suite
+
+      fixture←⍬ ⋄ setupError←''
+      :If 3=suite.⎕NC'Setup'
+          :Trap 0
+              fixture←suite.Setup ⍬
+          :Else
+              setupError←'Setup failed: ',ErrorText ⍬
+          :EndTrap
+      :EndIf
+
+      :For name :In names
+          cases←,⊂''⍬
+          :If 2=suite.⎕NC name,'_cases'
+              cases←suite⍎name,'_cases'
+          :EndIf
+          :For (label case) :In cases
+              full←(DisplayName name),(0≠≢label)/' [',label,']'
+              :If (~slow)∧(⊂name)∊slowNames
+                  results⍪←sname full'SKIP' ''
+              :ElseIf 0≠≢setupError
+                  results⍪←sname full'ERROR'setupError
+              :Else
+                  results⍪←sname full,fixture RunOne suite name case
+              :EndIf
+          :EndFor
+      :EndFor
+    ∇
+
+    ∇ result←fixture RunOne(suite name case);test
+      ⍝ ← ←→ status message
+      test←suite⍎name
+      :Trap 0
+          {}fixture test case
+          result←'PASS' ''
+      :Else
+          :If FAIL_EN=⎕DMX.EN
+              result←'FAIL'⎕DMX.Message
+          :Else
+              result←'ERROR'(ErrorText ⍬)
+          :EndIf
+      :EndTrap
+    ∇
+
+    ErrorText←{
+        ⍝ Error name, message and offending line from the current ⎕DMX.
+        dm←⎕DMX.DM ⋄ msg←⎕DMX.Message
+        line←{(∨\⍵≠' ')/⍵}{⍵/⍨~⌽∧\⌽⍵=' '}2⊃dm,⊂''
+        (⊃dm),((0≠≢msg)/': ',msg),(0≠≢line)/' in: ',line
+    }
+
+    DisplayName←{
+        ⍝ test_places_pawns ←→ 'places pawns'
+        ' '@(=∘'_')(≢PREFIX)↓⍵
+    }
+
+    Matches←{
+        ⍝ Case-insensitive substring match; an empty filter matches everything.
+        0=≢⍺:1
+        ∨/(⎕C ⍺)⍷⎕C ⍵
+    }
+
+    ⍝ Reporting
+
+    ∇ {r}←Report results;row;status;counts;words
+      ⍝ Prints one line per test, failure details, and a summary.
+      r←⍬
+      :For row :In ↓results
+          status←3⊃row
+          ⍞←status,((6-≢status)⍴' '),(1⊃row),' ',(2⊃row),⎕UCS 10
+          :If (⊂status)∊'FAIL' 'ERROR'
+              ⍞←'      ',(4⊃row),⎕UCS 10
+          :EndIf
+      :EndFor
+      counts←+/'PASS' 'FAIL' 'ERROR' 'SKIP'∘.≡results[;3]
+      words←'passed' 'failed' 'errored' 'skipped'
+      ⍞←(⎕UCS 10),(¯2↓∊(⍕¨counts),¨' ',¨words,¨⊂', '),⎕UCS 10
+    ∇
+
+    SuiteName←{
+        ⍝ #.BoardTests ←→ 'BoardTests'
+        ⊃⌽'.'(≠⊆⊢)⍕⍵
+    }
+
+    Failed←{
+        ⍝ ⍵ ←→ results matrix from Run
+        ⍝ ← ←→ 1 if any test failed or errored
+        ∨/(⍵[;3])∊'FAIL' 'ERROR'
+    }
+
+:EndNamespace

@@ -1,0 +1,40 @@
+:Namespace Board
+    ⎕IO ⎕ML←1
+
+    initBoard←{
+        ⍝
+        ⍝ ⍵ ←→
+        ⍝ ← ←→
+
+        initFromFEN 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+    }
+
+    initFromFEN ←{
+        ⍝
+        ⍝ ⍵ ←→
+        ⍝ ← ←→
+
+        f←' '(≠⊆⊢)⍵
+        f,←((≢f)-4)↓(,'0')(,'1')
+        (pieces side castling en_passant halfmove fullmove)←f
+        pieces←pieces~'/'
+        digits←pieces∊⎕D
+        pieces_expanded←'.'@(∊∘⎕D)pieces/⍨(~digits)+digits×¯1+⎕D⍳pieces
+    
+        ⍝ Each FEN letter is paired with its piece by name, so the bitboard
+        ⍝ rows follow the numbering in Pieces, whatever its order.
+        fen_letters←'PNBRQKpnbrqk'
+        piece_ids←##.Pieces.(P N B R Q K p n b r q k)
+        squares←(piece_ids,0)[fen_letters⍳,⊖8 8⍴pieces_expanded]
+        bitboard←(⍳≢piece_ids)∘.=squares
+        game_state←##.GameState.init (
+            side:side≡,'b'
+            castling_rights:'KQkq'∊castling
+            en_passant_square:{⍵≡,'-':0 ⋄ ('abcdefgh'⍳⊃⍵)+8×¯1+'12345678'⍳⊃⌽⍵}en_passant
+            halfmove:⊃2⊃⎕VFI halfmove
+            fullmove:⊃2⊃⎕VFI fullmove
+        )
+        bitboard game_state
+    }
+ 
+:EndNamespace

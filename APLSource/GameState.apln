@@ -1,0 +1,23 @@
+:Namespace GameState
+    ⎕IO ⎕ML←1
+    
+    ⍝ These are the indices used for the game state vector.
+    ⍝ The goal is to keep the representation slim so that move generation does not occupy as much memory.
+
+    side←1
+    castling_rights←1+⍳4
+    en_passant_square←6
+    halfmove←7
+    fullmove←8
+
+    init←{
+        ⍝ Initialize a game state vector.
+        ⍝ ⍵ ←→
+        ⍝ ← ←→
+        game_state←8⍴0
+        game_state[side en_passant_square halfmove fullmove]←⍵ ⎕VGET 'side' 'en_passant_square' 'halfmove' 'fullmove'
+        game_state[castling_rights]←⍵ ⎕VGET 'castling_rights'   ⍝ Keep castling rights separate since it is vector of indices
+        game_state
+    }
+
+:EndNamespace

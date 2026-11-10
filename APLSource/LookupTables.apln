@@ -1,0 +1,55 @@
+:Namespace LookupTables
+    ⍝ Generation of lookup tables for the move generation.
+    ⎕IO ⎕ML←1
+
+    ⍝ Ray directions as (rank file) steps. The position of a direction in
+    ⍝ this vector is its index into the first axis of the rays table.
+    directions←(1 0)(¯1 0)(0 1)(0 ¯1)(1 1)(1 ¯1)(¯1 1)(¯1 ¯1)
+    orthogonal←⍸0∊¨directions
+    diagonal←⍸~0∊¨directions
+
+    createLookupTables←{
+        ⍝ Creates the lookup tables.
+        ⍝ ⍵ ←→ empty
+        ⍝ ← ←→ namespace of lookup tables
+
+        coordinates←,⍳8 8                    
+        move_offsets←∘.(-⍨)⍨coordinates     
+        (
+            knight:createKnightLookup move_offsets
+            king:createKingLookup move_offsets
+            pawn:createPawnLookup move_offsets 
+            rays:createRays coordinates        
+        )
+    }
+
+    createKnightLookup←{
+        ⍝ Create lookup table for the knight
+        ⍝ ⍵ ←→ Coordinates vector
+        ⍝ ← ←→ Knight lookup table as length 64 vector
+        ⍵∊(1 2)(2 1)(¯1 2)(¯2 1)(1 ¯2)(2 ¯1)(¯1 ¯2)(¯2 ¯1)
+    }
+
+    createKingLookup←{
+        ⍝ Create lookup table for the king
+        ⍝ ⍵ ←→ Coordinates vector
+        ⍝ ← ←→ King lookup table as length 64 vector
+        ⍵∊(,∘.,⍨¯1 0 1)~⊂0 0
+    }
+
+    createPawnLookup←{
+        ↑(⍵∊(1 ¯1)(1 1))(⍵∊(¯1 ¯1)(¯1 1)) 
+    }
+
+    createRays←{
+        coordinates←⍵
+        radiateSingleDirection←{
+            c←(⍵⊃coordinates)+⍤1⊢(⍳7)∘.×⍺
+            c←c⌿⍨∧/(c≥1)∧c≤8
+            1+8⊥⍉c-1
+        }
+        directions∘.radiateSingleDirection⍳64
+    }
+
+:EndNamespace
+ 
