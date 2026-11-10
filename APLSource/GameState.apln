@@ -9,14 +9,14 @@
     en_passant_square←6
     halfmove←7
     fullmove←8
+    max_index←⌈/∊side castling_rights en_passant_square halfmove fullmove
 
     init←{
         ⍝ Initialize a game state vector.
         ⍝ ⍵ ←→
         ⍝ ← ←→
-        game_state←8⍴0
-        game_state[side en_passant_square halfmove fullmove]←⍵ ⎕VGET 'side' 'en_passant_square' 'halfmove' 'fullmove'
-        game_state[castling_rights]←⍵ ⎕VGET 'castling_rights'   ⍝ Keep castling rights separate since it is vector of indices
+        game_state←max_index⍴0
+        game_state[∊side castling_rights en_passant_square halfmove fullmove]←∊⍵ ⎕VGET 'side' 'castling_rights'  'en_passant_square' 'halfmove' 'fullmove'
         game_state
     }
 

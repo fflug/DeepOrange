@@ -1,5 +1,5 @@
 :Namespace Pieces
-
+    ⎕IO ⎕ML ←1
     (P N B R Q K)←⍳6      ⍝ White pieces
     (p n b r q k)←6+⍳6    ⍝ Black pieces
 
