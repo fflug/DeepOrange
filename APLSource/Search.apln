@@ -1,0 +1,3 @@
+:Namespace Search
+    ⎕IO ⎕ML←1
+:EndNamespace

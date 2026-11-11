@@ -1,32 +1,62 @@
 :Namespace MoveGeneration
+    ⍝ Generation of pseudo-legal moves
+
     ⎕IO ⎕ML←1                                       
  
     generatePseudoLegalMoves←{
         ⍝ ⍺ ←→ lookup tables
-        ⍝ ⍵ ←→ bitboard, game state
+        ⍝ ⍵ ←→ bitboards, game state
         ⍝ ← ←→ matrix of (from to promotion); promotion is 0 for a
         ⍝      non-promoting move, otherwise the piece type promoted to
+        
         lookups←⍺
-        (bitboard game_state)←⍵
+        (bitboards game_state)←⍵
         P←##.Pieces
         side←game_state[##.GameState.side]
         offset←6×side
-        own←∨⌿bitboard[offset+⍳6;]
-        enemy←∨⌿bitboard[(6-offset)+⍳6;]
+        own←∨⌿bitboards[offset+⍳6;]
+        enemy←∨⌿bitboards[(6-offset)+⍳6;]
         occupied←own∨enemy
-        squaresOf←{⍸bitboard[offset+⍵;]}
 
         ⍝ One attack matrix for all non-pawn pieces: a row per piece,
-        ⍝ a column per square, in the same order as from.
+        ⍝ a column per square, in the same order as from. ⍸ lists pieces
+        ⍝ grouped by type, and key keeps that order.
         types←P.(N B R Q K)
-        from←∊squaresOf¨types
-        attacks←⊃⍪/{lookups pieceAttacks ⍵(squaresOf ⍵)occupied}¨types
+        (type from)←↓⍉↑⍸bitboards[offset+types;]
+        attacks←⊃⍪/type{⊂lookups generatePieceAttacks types[⍺]⍵ occupied}⌸from
         piece_moves←from expand attacks∧⍤1⊢~own
 
-        pawn_squares←squaresOf P.P
+        pawn_moves←lookups generatePseudoLegalPawnMoves bitboards occupied enemy side offset (game_state[##.GameState.en_passant_square])
+
+        (piece_moves,0)⍪pawn_moves
+
+
+    }
+
+    expand←{
+        ⍝ ⍺ ←→ from squares, one per row of ⍵
+        ⍝ ⍵ ←→ boolean matrix, (≢⍺)×64; 1 marks a reachable square
+        ⍝ ← ←→ matrix of (from to), one row per 1 in ⍵
+        hits←↑⍸⍵
+        ⍺[hits[;1]],⍪hits[;2]
+    }
+
+    generatePseudoLegalPawnMoves←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ bitboards, occupancy, enemy occupancy, side to move,
+        ⍝      bitboard offset of the side to move, en passant square
+        ⍝ ← ←→ matrix of (from to promotion), as for generatePseudoLegalMoves
+
+        (bitboards occupied enemy side offset en_passant_square)←⍵
+        
+        P←##.Pieces
+
+
+        pawn_squares←⍸bitboards[offset+P.P;]
         pawn_direction←8-16×side
         pawn_home_rank←2+5×side
-        en_passant←game_state[##.GameState.en_passant_square]=⍳64
+        ⍝ en_passant is all zeros when there is no en passant square.
+        en_passant←en_passant_square=⍳64
 
         single_push_from←pawn_squares/⍨~occupied[pawn_squares+pawn_direction]
         double_push_from←single_push_from/⍨pawn_home_rank=⌈single_push_from÷8
@@ -40,33 +70,28 @@
         ⍝ A pawn reaching rank 1 or 8 yields one move per promotion piece.
         promotions←1 8∊⍨⌈pawn_moves[;2]÷8
         promoting←(pawn_moves⌿⍨4×promotions),(4×+/promotions)⍴P.(Q R B N)
+        pawn_moves←promoting⍪(~promotions)⌿pawn_moves,0
 
-        (piece_moves,0)⍪promoting⍪(~promotions)⌿pawn_moves,0
+        pawn_moves
+        
     }
 
-    expand←{
-        ⍝ ⍺ ←→ from squares, one per row of ⍵
-        ⍝ ⍵ ←→ boolean matrix, (≢⍺)×64; 1 marks a reachable square
-        ⍝ ← ←→ matrix of (from to), one row per 1 in ⍵
-        hits←↑⍸⍵
-        ⍺[hits[;1]],⍪hits[;2]
-    }
-
-    pieceAttacks←{
+    generatePieceAttacks←{
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ piece type, from squares, occupancy
         ⍝ ← ←→ boolean matrix, one row per from square, one column per square
+        
         (piece squares occupied)←⍵
         P←##.Pieces
         L←##.LookupTables
         piece=P.N:⍺.knight[squares;]
         piece=P.K:⍺.king[squares;]
-        piece=P.B:⍺ slidingAttacks squares L.diagonal occupied
-        piece=P.R:⍺ slidingAttacks squares L.orthogonal occupied
-        ⍺ slidingAttacks squares L.(orthogonal,diagonal)occupied
+        piece=P.B:⍺ generateSlidingAttacks squares L.diagonal occupied
+        piece=P.R:⍺ generateSlidingAttacks squares L.orthogonal occupied
+        piece=P.Q:⍺ generateSlidingAttacks squares L.(orthogonal,diagonal)occupied
     }
 
-    slidingAttacks←{
+    generateSlidingAttacks←{
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ from squares, ray directions, occupancy
         ⍝ ← ←→ boolean matrix, one row per from square, one column per square

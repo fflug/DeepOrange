@@ -1,6 +1,11 @@
 :Namespace Pieces
+    ⍝ Encoding of pieces as integers, used as bitboard row indices.
+    ⍝ The order within a colour can be changed. Move generation relies on
+    ⍝ the white pieces being 1 to 6; black pieces follow as white plus 6.
+
     ⎕IO ⎕ML ←1
-    (P N B R Q K)←⍳6      ⍝ White pieces
-    (p n b r q k)←6+⍳6    ⍝ Black pieces
+
+    (P N B R Q K)←⍳6             ⍝ White pieces
+    (p n b r q k)←6+P N B R Q K  ⍝ Black pieces
 
 :EndNamespace

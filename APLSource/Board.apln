@@ -1,32 +1,44 @@
 :Namespace Board
+    ⍝ Representation of the board and the game state.
+
     ⎕IO ⎕ML←1
 
     initBoard←{
-        ⍝
-        ⍝ ⍵ ←→
-        ⍝ ← ←→
+        ⍝ Initialise the starting position.
+        ⍝ ⍵ ←→ empty
+        ⍝ ← ←→ bitboards, game state; as initFromFEN
 
+        ⍝ Positions are only ever built from FEN, so there is a single
+        ⍝ initialisation path.
         initFromFEN 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
     }
 
     initFromFEN ←{
-        ⍝
-        ⍝ ⍵ ←→
-        ⍝ ← ←→
+        ⍝ Initialise a position from a FEN string. The input is not validated.
+        ⍝ ⍵ ←→ FEN string
+        ⍝ ← ←→ two-element vector consisting of:
+        ⍝      bitboards: Boolean matrix, one row per piece.
+        ⍝      game state: vector encoding the current game state.
 
+        ⍝ Split the FEN into its fields and set defaults for halfmove and fullmove.
         f←' '(≠⊆⊢)⍵
         f,←((≢f)-4)↓(,'0')(,'1')
         (pieces side castling en_passant halfmove fullmove)←f
+
+        ⍝ A digit stands for that many empty squares. The piece description
+        ⍝ is expanded by writing each empty square as ".".
         pieces←pieces~'/'
         digits←pieces∊⎕D
         pieces_expanded←'.'@(∊∘⎕D)pieces/⍨(~digits)+digits×¯1+⎕D⍳pieces
-    
+
         ⍝ Each FEN letter is paired with its piece by name, so the bitboard
-        ⍝ rows follow the numbering in Pieces, whatever its order.
+        ⍝ rows follow the encoding given in Pieces.
+        ⍝ FEN lists rank 8 first. The bitboards run a1 to h8.
         fen_letters←'PNBRQKpnbrqk'
         piece_ids←##.Pieces.(P N B R Q K p n b r q k)
         squares←(piece_ids,0)[fen_letters⍳,⊖8 8⍴pieces_expanded]
-        bitboard←(⍳≢piece_ids)∘.=squares
+        bitboards←(⍳≢piece_ids)∘.=squares
+
         game_state←##.GameState.init (
             side:side≡,'b'
             castling_rights:'KQkq'∊castling
@@ -34,7 +46,8 @@
             halfmove:⊃2⊃⎕VFI halfmove
             fullmove:⊃2⊃⎕VFI fullmove
         )
-        bitboard game_state
+
+        bitboards game_state
     }
- 
+
 :EndNamespace
