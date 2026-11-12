@@ -2,19 +2,19 @@
     ⍝ Chess-specific helpers shared by the test suites.
     ⎕IO ⎕ML←1
 
-    Sq←{
+    sq←{
         ⍝ Algebraic square name to board index; a1 ←→ 1, h1 ←→ 8, a2 ←→ 9, h8 ←→ 64.
         ⍝ ⍵ ←→ square name, e.g. 'e4'
         ('abcdefgh'⍳⊃⍵)+8×¯1+'12345678'⍳⊃⌽⍵
     }
 
-    Sqs←{
+    sqs←{
         ⍝ Space-separated square names to a vector of indices, in the given order.
         ⍝ ⍵ ←→ e.g. 'e2 e4'
-        Sq¨' '(≠⊆⊢)⍵
+        sq¨' '(≠⊆⊢)⍵
     }
 
-    SortRows←{
+    sortRows←{
         ⍝ Rows of a move matrix in ascending order, so comparisons ignore
         ⍝ the order in which moves were generated.
         ⍵[⍋⍵;]

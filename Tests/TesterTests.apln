@@ -1,159 +1,83 @@
 :Namespace TesterTests
     ⎕IO ⎕ML←1
     T←#.Tester
+    A←#.Assert
 
     ⍝ Sample suites run by the runner tests below. They are nested
     ⍝ namespaces, so the outer runner does not discover them as tests.
 
     :Namespace Sample
-        Setup←{42}
-        test_passes←{1 #.Tester.Eq 1}
-        test_fails←{1 #.Tester.Eq 2}
+        setup←{42}
+        test_passes←{1 #.Assert.eq 1}
+        test_fails←{1 #.Assert.eq 2}
         test_crashes←{1÷0}
-        test_sees_the_fixture←{42 #.Tester.Eq ⍺}
-        test_checks_each_case←{#.Tester.Ok ⍵}
+        test_sees_the_fixture←{42 #.Assert.eq ⍺}
+        test_checks_each_case←{#.Assert.ok ⍵}
         test_checks_each_case_cases←('good' 1)('bad' 0)
-        test_takes_a_long_time←{1}
-        Slow←⊂'test_takes_a_long_time'
         helper←{0}
     :EndNamespace
 
     :Namespace BrokenSetup
-        Setup←{÷0}
+        setup←{÷0}
         test_never_runs←{1}
     :EndNamespace
 
-    Setup←{('' 0)#.Tester.RunSuite Sample}
+    setup←{#.Tester.runSuite Sample}
 
-    StatusOf←{
+    statusOf←{
         ⍝ ⍺ ←→ results matrix
         ⍝ ⍵ ←→ test display name
         (⍺[;2]⍳⊂⍵)⊃⍺[;3],⊂'MISSING'
     }
 
-    MessageOf←{
-        ⍝ Message of the failure signalled by ⍺⍺ ⍵, or '' when none is signalled.
-        0::⎕DMX.Message
-        ''⊣⍺⍺ ⍵
-    }
-
-    ⍝ Eq
-
-    test_eq_returns_one_when_values_match←{
-        T.Ok 1 2 T.Eq 1 2
-    }
-
-    test_eq_signals_a_failure_when_values_differ←{
-        ({1 T.Eq ⍵}T.Raises T.FAIL_EN)2
-    }
-
-    test_eq_message_shows_both_values_in_array_notation←{
-        'expected (1⋄) but got 1'T.Eq({(,1)T.Eq ⍵}MessageOf)1
-    }
-
-    ⍝ Ok
-
-    test_ok_returns_one_for_one←{
-        T.Ok T.Ok 1
-    }
-
-    test_ok_signals_a_failure_cases←('zero'0)('two ones'(1 1))('one-item vector'(,1))('character one'('1'))
-    test_ok_signals_a_failure←{
-        (T.Ok T.Raises T.FAIL_EN)⍵
-    }
-
-    ⍝ Raises
-
-    test_raises_returns_one_for_the_expected_error←{
-        T.Ok({÷⍵}T.Raises 11)0
-    }
-
-    test_raises_fails_when_no_error_is_signalled←{
-        'expected error 11 but no error was signalled'T.Eq(({÷⍵}T.Raises 11)MessageOf)1
-    }
-
-    test_raises_fails_on_a_different_error←{
-        'expected error 11 but got error 3'T.Eq(({⍵[3]}T.Raises 11)MessageOf)1 2
-    }
-
-    ⍝ Show
-
-    test_show_cases←(
-        ('matrix'((2 2⍴⍳4)'[1 2⋄3 4]'))
-        ('one-item vector'((,1)'(1⋄)'))
-        ('scalar'(1(,'1')))
-        ('empty numeric vector'(⍬(,'⍬')))
-        ('empty character vector'('' ''''''))
-        ('nested vector'((1'ab')'(1⋄''ab''⋄)'))
-        ('string containing brackets'('[⋄x⋄]' '''[⋄x⋄]'''))
-    )
-    test_show←{
-        (value expected)←⍵
-        expected T.Eq T.Show value
-    }
-
-    ⍝ Runner
-
     test_reports_a_passing_test_as_pass←{
-        'PASS'T.Eq ⍺ StatusOf'passes'
+        'PASS'A.eq ⍺ statusOf'passes'
     }
 
     test_reports_a_failed_assertion_as_fail←{
-        'FAIL'T.Eq ⍺ StatusOf'fails'
+        'FAIL'A.eq ⍺ statusOf'fails'
     }
 
     test_reports_the_assertion_message←{
-        'expected 1 but got 2'T.Eq(⍺[;2]⍳⊂'fails')⊃⍺[;4]
+        'expected 1 but got 2'A.eq(⍺[;2]⍳⊂'fails')⊃⍺[;4]
     }
 
     test_reports_any_other_error_as_error←{
-        'ERROR'T.Eq ⍺ StatusOf'crashes'
+        'ERROR'A.eq ⍺ statusOf'crashes'
     }
 
     test_passes_the_setup_result_to_each_test←{
-        'PASS'T.Eq ⍺ StatusOf'sees the fixture'
+        'PASS'A.eq ⍺ statusOf'sees the fixture'
     }
 
     test_reports_each_case_separately←{
-        'PASS' 'FAIL'T.Eq ⍺∘StatusOf¨'checks each case [good]' 'checks each case [bad]'
-    }
-
-    test_skips_slow_tests_by_default←{
-        'SKIP'T.Eq ⍺ StatusOf'takes a long time'
-    }
-
-    test_runs_slow_tests_when_asked←{
-        'PASS'T.Eq(('' 1)T.RunSuite Sample)StatusOf'takes a long time'
+        'PASS' 'FAIL'A.eq ⍺∘statusOf¨'checks each case [good]' 'checks each case [bad]'
     }
 
     test_only_runs_functions_named_as_tests←{
-        7 T.Eq≢⍺
+        6 A.eq≢⍺
     }
 
     test_names_the_suite_in_each_result←{
-        T.Ok∧/⍺[;1]∊⊂'Sample'
-    }
-
-    test_filter_selects_matching_tests_ignoring_case←{
-        (,⊂'sees the fixture')T.Eq(('FIXTURE' 0)T.RunSuite Sample)[;2]
+        A.ok∧/⍺[;1]∊⊂'Sample'
     }
 
     test_reports_every_test_as_error_when_setup_fails←{
-        r←('' 0)T.RunSuite BrokenSetup
-        _←(,⊂'ERROR')T.Eq r[;3]
-        T.Ok'Setup failed'≡12↑⊃r[;4]
+        r←T.runSuite BrokenSetup
+        _←(,⊂'ERROR')A.eq r[;3]
+        A.ok'setup failed'≡12↑⊃r[;4]
     }
 
     test_failed_is_one_when_any_test_fails_or_errors←{
-        T.Ok T.Failed ⍺
+        A.ok T.failed ⍺
     }
 
-    test_failed_is_zero_when_all_tests_pass_or_skip←{
-        0 T.Eq T.Failed ⍺⌿⍨⍺[;3]∊'PASS' 'SKIP'
+    test_failed_is_zero_when_all_tests_pass←{
+        0 A.eq T.failed ⍺⌿⍨⍺[;3]∊⊂'PASS'
     }
 
     test_display_name_drops_the_prefix_and_underscores←{
-        'places white pawns'T.Eq T.DisplayName'test_places_white_pawns'
+        'places white pawns'A.eq T.getDisplayName'test_places_white_pawns' ''
     }
 
 :EndNamespace

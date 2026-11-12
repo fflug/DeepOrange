@@ -1,107 +1,107 @@
 :Namespace MoveGenerationTests
     ⎕IO ⎕ML←1
-    T←#.Tester
+    A←#.Assert
     H←#.Helpers
 
-    ⍝ Moves are rows of (from to promotion); promotion is 0 for a
+    ⍝ moves are rows of (from to promotion); promotion is 0 for a
     ⍝ non-promoting move, otherwise the piece type promoted to.
 
-    Setup←{#.LookupTables.createLookupTables ⍬}
+    setup←{#.LookupTables.createLookupTables ⍬}
 
-    Moves←{
+    moves←{
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ FEN
-        H.SortRows ⍺ #.MoveGeneration.generatePseudoLegalMoves #.Board.initFromFEN ⍵
+        H.sortRows ⍺ #.MoveGeneration.generatePseudoLegalMoves #.Board.initFromFEN ⍵
     }
 
-    From←{
-        ⍝ Moves from one square.
+    from←{
+        ⍝ moves from one square.
         ⍝ ⍺ ←→ move matrix
         ⍝ ⍵ ←→ square name
-        ⍺⌿⍨⍺[;1]=H.Sq ⍵
+        ⍺⌿⍨⍺[;1]=H.sq ⍵
     }
 
-    Targets←{
+    targets←{
         ⍝ Destination squares of the moves from one square.
-        (⍺ From ⍵)[;2]
+        (⍺ from ⍵)[;2]
     }
 
-    Row←{
+    row←{
         ⍝ 'e2 e4' ←→ from to 0
-        (H.Sqs ⍵),0
+        (H.sqs ⍵),0
     }
 
     ⍝ Start position
 
     test_start_position_has_twenty_moves_for_white←{
-        20 T.Eq ≢⍺ Moves H.START
+        20 A.eq ≢⍺ moves H.START
     }
 
     test_start_position_has_twenty_moves_for_black←{
-        20 T.Eq ≢⍺ Moves'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1'
+        20 A.eq ≢⍺ moves'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1'
     }
 
     test_knight_on_g1_reaches_f3_and_h3←{
-        (H.Sqs'f3 h3')T.Eq(⍺ Moves H.START)Targets'g1'
+        (H.sqs'f3 h3')A.eq(⍺ moves H.START)targets'g1'
     }
 
     test_never_moves_onto_own_pieces←{
         own←∨⌿(⊃#.Board.initFromFEN H.START)[⍳6;]
-        T.Ok ~∨/own[(⍺ Moves H.START)[;2]]
+        A.ok ~∨/own[(⍺ moves H.START)[;2]]
     }
 
     ⍝ Pawns
 
     test_pawn_on_home_rank_can_push_one_or_two_squares←{
-        (H.Sqs'e3 e4')T.Eq(⍺ Moves'k7/8/8/8/8/8/4P3/K7 w - - 0 1')Targets'e2'
+        (H.sqs'e3 e4')A.eq(⍺ moves'k7/8/8/8/8/8/4P3/K7 w - - 0 1')targets'e2'
     }
 
     test_pawn_off_home_rank_pushes_one_square←{
-        (,H.Sq'e4')T.Eq(⍺ Moves'k7/8/8/8/8/4P3/8/K7 w - - 0 1')Targets'e3'
+        (,H.sq'e4')A.eq(⍺ moves'k7/8/8/8/8/4P3/8/K7 w - - 0 1')targets'e3'
     }
 
     test_black_pawn_pushes_towards_rank_one←{
-        (H.Sqs'd5 d6')T.Eq(⍺ Moves'k7/3p4/8/8/8/8/8/K7 b - - 0 1')Targets'd7'
+        (H.sqs'd5 d6')A.eq(⍺ moves'k7/3p4/8/8/8/8/8/K7 b - - 0 1')targets'd7'
     }
 
     test_blocked_pawn_cannot_push←{
-        ⍬ T.Eq(⍺ Moves'k7/8/8/4p3/4P3/8/8/K7 w - - 0 1')Targets'e4'
+        ⍬ A.eq(⍺ moves'k7/8/8/4p3/4P3/8/8/K7 w - - 0 1')targets'e4'
     }
 
     test_pawn_cannot_double_push_through_a_piece←{
-        ⍬ T.Eq(⍺ Moves'k7/8/8/8/8/4n3/4P3/K7 w - - 0 1')Targets'e2'
+        ⍬ A.eq(⍺ moves'k7/8/8/8/8/4n3/4P3/K7 w - - 0 1')targets'e2'
     }
 
     test_pawn_captures_diagonally←{
-        (H.Sqs'd5 e5')T.Eq(⍺ Moves'k7/8/8/3p4/4P3/8/8/K7 w - - 0 1')Targets'e4'
+        (H.sqs'd5 e5')A.eq(⍺ moves'k7/8/8/3p4/4P3/8/8/K7 w - - 0 1')targets'e4'
     }
 
     test_pawn_captures_en_passant←{
-        T.Ok(⊂Row'e5 d6')∊↓⍺ Moves'k7/8/8/3pP3/8/8/8/K7 w - d6 0 1'
+        A.ok(⊂row'e5 d6')∊↓⍺ moves'k7/8/8/3pP3/8/8/8/K7 w - d6 0 1'
     }
 
     test_pawn_reaching_the_last_rank_promotes_to_four_pieces←{
-        expected←H.SortRows(4 2⍴H.Sqs'e7 e8'),#.Pieces.(Q R B N)
-        expected T.Eq(⍺ Moves'k7/4P3/8/8/8/8/8/K7 w - - 0 1')From'e7'
+        expected←H.sortRows(4 2⍴H.sqs'e7 e8'),#.Pieces.(Q R B N)
+        expected A.eq(⍺ moves'k7/4P3/8/8/8/8/8/K7 w - - 0 1')from'e7'
     }
 
     ⍝ Sliding pieces
 
     test_rook_is_blocked_by_own_pieces←{
-        (H.Sqs'b1 c1 d1 e1 f1 g1')T.Eq(⍺ Moves'k7/8/8/8/8/8/P7/R6K w - - 0 1')Targets'a1'
+        (H.sqs'b1 c1 d1 e1 f1 g1')A.eq(⍺ moves'k7/8/8/8/8/8/P7/R6K w - - 0 1')targets'a1'
     }
 
     test_rook_captures_the_first_enemy_piece_and_stops←{
-        (H.Sqs'b1 c1 d1 e1 f1 g1 a2 a3')T.Eq(⍺ Moves'k7/8/8/8/8/p7/8/R6K w - - 0 1')Targets'a1'
+        (H.sqs'b1 c1 d1 e1 f1 g1 a2 a3')A.eq(⍺ moves'k7/8/8/8/8/p7/8/R6K w - - 0 1')targets'a1'
     }
 
     test_bishop_moves_diagonally_only←{
-        expected←H.Sqs'b1 d1 b3 d3 a4 e4 f5 g6 h7'
-        (expected[⍋expected])T.Eq(⍺ Moves'k7/8/8/8/8/8/2B5/K7 w - - 0 1')Targets'c2'
+        expected←H.sqs'b1 d1 b3 d3 a4 e4 f5 g6 h7'
+        (expected[⍋expected])A.eq(⍺ moves'k7/8/8/8/8/8/2B5/K7 w - - 0 1')targets'c2'
     }
 
     test_queen_in_the_corner_of_an_empty_board_has_twenty_one_moves←{
-        21 T.Eq ≢(⍺ Moves'6k1/8/8/8/8/7K/8/Q7 w - - 0 1')From'a1'
+        21 A.eq ≢(⍺ moves'6k1/8/8/8/8/7K/8/Q7 w - - 0 1')from'a1'
     }
 
 :EndNamespace

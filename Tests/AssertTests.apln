@@ -1,0 +1,66 @@
+:Namespace AssertTests
+    ⎕IO ⎕ML←1
+    A←#.Assert
+
+    messageOf←{
+        ⍝ Message of the failure signalled by ⍺⍺ ⍵, or '' when none is signalled.
+        0::⎕DMX.Message
+        ''⊣⍺⍺ ⍵
+    }
+
+    ⍝ eq
+
+    test_eq_returns_one_when_values_match←{
+        A.ok 1 2 A.eq 1 2
+    }
+
+    test_eq_signals_a_failure_when_values_differ←{
+        ({1 A.eq ⍵}A.raises #.Tester.FAIL_EN)2
+    }
+
+    test_eq_message_shows_both_values_in_array_notation←{
+        'expected (1⋄) but got 1'A.eq({(,1)A.eq ⍵}messageOf)1
+    }
+
+    ⍝ ok
+
+    test_ok_returns_one_for_one←{
+        A.ok A.ok 1
+    }
+
+    test_ok_signals_a_failure_cases←('zero'0)('two ones'(1 1))('one-item vector'(,1))('character one'('1'))
+    test_ok_signals_a_failure←{
+        (A.ok A.raises #.Tester.FAIL_EN)⍵
+    }
+
+    ⍝ raises
+
+    test_raises_returns_one_for_the_expected_error←{
+        A.ok({÷⍵}A.raises 11)0
+    }
+
+    test_raises_fails_when_no_error_is_signalled←{
+        'expected error 11 but no error was signalled'A.eq(({÷⍵}A.raises 11)messageOf)1
+    }
+
+    test_raises_fails_on_a_different_error←{
+        'expected error 11 but got error 3'A.eq(({⍵[3]}A.raises 11)messageOf)1 2
+    }
+
+    ⍝ show
+
+    test_show_cases←(
+        ('matrix'((2 2⍴⍳4)'[1 2⋄3 4]'))
+        ('one-item vector'((,1)'(1⋄)'))
+        ('scalar'(1(,'1')))
+        ('empty numeric vector'(⍬(,'⍬')))
+        ('empty character vector'('' ''''''))
+        ('nested vector'((1'ab')'(1⋄''ab''⋄)'))
+        ('string containing brackets'('[⋄x⋄]' '''[⋄x⋄]'''))
+    )
+    test_show←{
+        (value expected)←⍵
+        expected A.eq A.show value
+    }
+
+:EndNamespace

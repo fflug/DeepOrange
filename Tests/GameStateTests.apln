@@ -1,48 +1,48 @@
 :Namespace GameStateTests
     ⎕IO ⎕ML←1
-    T←#.Tester
+    A←#.Assert
 
-    Setup←{
+    setup←{
         (full:(side:1 ⋄ castling_rights:1 0 1 0 ⋄ en_passant_square:20 ⋄ halfmove:3 ⋄ fullmove:12))
     }
 
     FIELDS←'side' 'castling_rights' 'en_passant_square' 'halfmove' 'fullmove'
 
     test_returns_one_slot_per_index←{
-        (⌈/∊#.GameState.(side castling_rights en_passant_square halfmove fullmove))T.Eq ≢#.GameState.init ⍺.full
+        (⌈/∊#.GameState.(side castling_rights en_passant_square halfmove fullmove))A.eq ≢#.GameState.init ⍺.full
     }
 
     test_reads_side_from_the_namespace←{
-        1 T.Eq(#.GameState.init ⍺.full)[#.GameState.side]
+        1 A.eq(#.GameState.init ⍺.full)[#.GameState.side]
     }
 
     test_reads_castling_rights_from_the_namespace←{
-        1 0 1 0 T.Eq(#.GameState.init ⍺.full)[#.GameState.castling_rights]
+        1 0 1 0 A.eq(#.GameState.init ⍺.full)[#.GameState.castling_rights]
     }
 
     test_reads_the_en_passant_square_from_the_namespace←{
-        20 T.Eq(#.GameState.init ⍺.full)[#.GameState.en_passant_square]
+        20 A.eq(#.GameState.init ⍺.full)[#.GameState.en_passant_square]
     }
 
     test_reads_the_halfmove_clock_from_the_namespace←{
-        3 T.Eq(#.GameState.init ⍺.full)[#.GameState.halfmove]
+        3 A.eq(#.GameState.init ⍺.full)[#.GameState.halfmove]
     }
 
     test_reads_the_fullmove_number_from_the_namespace←{
-        12 T.Eq(#.GameState.init ⍺.full)[#.GameState.fullmove]
+        12 A.eq(#.GameState.init ⍺.full)[#.GameState.fullmove]
     }
 
     test_ignores_unrelated_fields_such_as_bitboard←{
         ns←⎕NS ⍺.full
         ns.bitboard←12 64⍴0
-        (#.GameState.init ⍺.full)T.Eq #.GameState.init ns
+        (#.GameState.init ⍺.full)A.eq #.GameState.init ns
     }
 
     test_rejects_a_namespace_missing_a_field_cases←{⍵ ⍵}¨FIELDS
     test_rejects_a_namespace_missing_a_field←{
         ns←⎕NS ⍺.full
         _←ns.⎕EX ⍵
-        (#.GameState.init T.Raises 6)ns
+        (#.GameState.init A.raises 6)ns
     }
 
 :EndNamespace

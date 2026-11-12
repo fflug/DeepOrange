@@ -1,0 +1,58 @@
+:Namespace Assert
+    ⍝ Assertions for test functions.
+    ⍝ Each assertion returns 1 on success, so a dfn test can end with one.
+    ⍝ On failure it signals #.Tester.FAIL_EN, which the runner reports as
+    ⍝ FAIL rather than ERROR.
+
+    ⎕IO ⎕ML←1
+
+    fail←{
+        ⍝ ⍵ ←→ failure message
+        ⎕SIGNAL⊂('EN'#.Tester.FAIL_EN)('Message'(,⍕⍵))
+    }
+
+    eq←{
+        ⍝ ⍺ ←→ expected value
+        ⍝ ⍵ ←→ actual value
+        ⍺≡⍵:1
+        fail'expected ',(show ⍺),' but got ',show ⍵
+    }
+
+    ok←{
+        ⍝ ⍵ ←→ value that must be exactly 1
+        1≡⍵:1
+        fail'expected 1 but got ',show ⍵
+    }
+
+    raises←{
+        ⍝ (fn raises en) arg
+        ⍝ ⍺⍺ ←→ function under test
+        ⍝ ⍵⍵ ←→ expected error number
+        ⍝ ⍵  ←→ argument passed to ⍺⍺
+        fn←⍺⍺
+        got←{0::⎕DMX.EN ⋄ 0⊣fn ⍵}⍵
+        got≡⍵⍵:1
+        got≡0:fail'expected error ',(⍕⍵⍵),' but no error was signalled'
+        fail'expected error ',(⍕⍵⍵),' but got error ',⍕got
+    }
+
+    ⍝ Array notation serialiser. Interactive sessions provide it as
+    ⍝ ⎕SE.Dyalog.Array; dyalogscript starts with an empty ⎕SE, so it is
+    ⍝ loaded from the installation instead.
+    loadArrayNotation←{
+        0::⎕FIX'file://',(2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'),'/StartupSession/Dyalog/Array.apln'
+        ⎕SE.Dyalog.Array
+    }
+    ArrayNotation←loadArrayNotation ⍬
+
+    show←{
+        ⍝ Single-line array notation, so shape and type differences are
+        ⍝ visible: (1⋄) vs 1, ⍬ vs '', '1' vs 1.
+        ⍝ The serialiser pads brackets with diamonds ([⋄1 2⋄3 4⋄]); those are
+        ⍝ removed outside string literals. Parentheses keep theirs, because
+        ⍝ (1⋄) is how a one-item vector is written.
+        s←⊃1 ArrayNotation.Serialise ⍵
+        '''[^'']*''' '\[⋄' '⋄\]'⎕R(,¨'&[]')⊢s
+    }
+
+:EndNamespace

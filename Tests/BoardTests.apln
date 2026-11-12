@@ -1,66 +1,66 @@
 :Namespace BoardTests
     ⎕IO ⎕ML←1
-    T←#.Tester
+    A←#.Assert
     H←#.Helpers
 
-    ⍝ Each test parses its own FEN through Parse, so a parser that cannot
+    ⍝ Each test parses its own FEN through parse, so a parser that cannot
     ⍝ load or crashes is reported per test rather than for the whole suite.
-    Parse←{#.Board.initFromFEN ⍵}
-    Bitboard←{⊃Parse ⍵}
-    State←{2⊃Parse ⍵}
-    On←{⍸(⊃Parse ⍺)[⍵;]}
+    parse←{#.Board.initFromFEN ⍵}
+    bitboard←{⊃parse ⍵}
+    state←{2⊃parse ⍵}
+    on←{⍸(⊃parse ⍺)[⍵;]}
 
     ⍝ Piece placement
 
     test_returns_twelve_bitboards_of_sixty_four_squares←{
-        12 64 T.Eq ⍴Bitboard H.START
+        12 64 A.eq ⍴bitboard H.START
     }
 
     test_places_white_pawns_on_rank_two←{
-        (H.Sqs'a2 b2 c2 d2 e2 f2 g2 h2')T.Eq H.START On #.Pieces.P
+        (H.sqs'a2 b2 c2 d2 e2 f2 g2 h2')A.eq H.START on #.Pieces.P
     }
 
     test_places_black_pawns_on_rank_seven←{
-        (H.Sqs'a7 b7 c7 d7 e7 f7 g7 h7')T.Eq H.START On #.Pieces.p
+        (H.sqs'a7 b7 c7 d7 e7 f7 g7 h7')A.eq H.START on #.Pieces.p
     }
 
     test_places_white_king_on_e1←{
-        (,H.Sq'e1')T.Eq H.START On #.Pieces.K
+        (,H.sq'e1')A.eq H.START on #.Pieces.K
     }
 
     test_places_black_queen_on_d8←{
-        (,H.Sq'd8')T.Eq H.START On #.Pieces.q
+        (,H.sq'd8')A.eq H.START on #.Pieces.q
     }
 
     test_places_white_rooks_in_the_corners_of_rank_one←{
-        (H.Sqs'a1 h1')T.Eq H.START On #.Pieces.R
+        (H.sqs'a1 h1')A.eq H.START on #.Pieces.R
     }
 
     test_leaves_ranks_three_to_six_empty←{
-        (32⍴0)T.Eq ∨⌿(Bitboard H.START)[;16+⍳32]
+        (32⍴0)A.eq ∨⌿(bitboard H.START)[;16+⍳32]
     }
 
     test_puts_at_most_one_piece_on_each_square←{
-        T.Ok ∧/1≥+⌿Bitboard H.START
+        A.ok ∧/1≥+⌿bitboard H.START
     }
 
     test_expands_digits_into_empty_squares←{
         fen←'8/8/8/8/3N4/8/8/8 w - - 0 1'
-        (,H.Sq'd4')T.Eq fen On #.Pieces.N
+        (,H.sq'd4')A.eq fen on #.Pieces.N
     }
 
     test_initBoard_sets_up_the_start_position←{
-        (Parse H.START)T.Eq #.Board.initBoard ⍬
+        (parse H.START)A.eq #.Board.initBoard ⍬
     }
 
     ⍝ Game state fields
 
     test_reads_white_to_move←{
-        0 T.Eq(State H.START)[#.GameState.side]
+        0 A.eq(state H.START)[#.GameState.side]
     }
 
     test_reads_black_to_move←{
-        1 T.Eq(State'8/8/8/8/8/8/8/8 b - - 0 1')[#.GameState.side]
+        1 A.eq(state'8/8/8/8/8/8/8/8 b - - 0 1')[#.GameState.side]
     }
 
     test_reads_castling_rights_cases←(
@@ -70,7 +70,7 @@
     )
     test_reads_castling_rights←{
         (field expected)←⍵
-        expected T.Eq(State'8/8/8/8/8/8/8/8 w ',field,' - 0 1')[#.GameState.castling_rights]
+        expected A.eq(state'8/8/8/8/8/8/8/8 w ',field,' - 0 1')[#.GameState.castling_rights]
     }
 
     test_reads_en_passant_square_cases←(
@@ -80,15 +80,15 @@
     )
     test_reads_en_passant_square←{
         (field expected)←⍵
-        expected T.Eq(State'8/8/8/8/8/8/8/8 w - ',field,' 0 1')[#.GameState.en_passant_square]
+        expected A.eq(state'8/8/8/8/8/8/8/8 w - ',field,' 0 1')[#.GameState.en_passant_square]
     }
 
     test_reads_halfmove_and_fullmove_clocks←{
-        5 42 T.Eq(State'8/8/8/8/8/8/8/8 w - - 5 42')[#.GameState.(halfmove fullmove)]
+        5 42 A.eq(state'8/8/8/8/8/8/8/8 w - - 5 42')[#.GameState.(halfmove fullmove)]
     }
 
     test_defaults_clocks_when_fen_omits_them←{
-        0 1 T.Eq(State'8/8/8/8/8/8/8/8 w - -')[#.GameState.(halfmove fullmove)]
+        0 1 A.eq(state'8/8/8/8/8/8/8/8 w - -')[#.GameState.(halfmove fullmove)]
     }
 
 :EndNamespace

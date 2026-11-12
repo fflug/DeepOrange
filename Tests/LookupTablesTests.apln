@@ -1,56 +1,56 @@
 :Namespace LookupTablesTests
     ⎕IO ⎕ML←1
-    T←#.Tester
+    A←#.Assert
     H←#.Helpers
 
-    Setup←{#.LookupTables.createLookupTables ⍬}
+    setup←{#.LookupTables.createLookupTables ⍬}
 
-    ⍝ Ray directions, as indices into the first axis of the rays table.
+    ⍝ ray directions, as indices into the first axis of the rays table.
     (NORTH SOUTH EAST WEST NORTHEAST NORTHWEST SOUTHEAST SOUTHWEST)←⍳8
 
-    Ray←{
+    ray←{
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ direction, square name
         (direction square)←⍵
-        ⊃⍺.rays[direction;H.Sq square]
+        ⊃⍺.rays[direction;H.sq square]
     }
 
     ⍝ Knight
 
     test_knight_in_the_corner_reaches_two_squares←{
-        (H.Sqs'c2 b3')T.Eq ⍸⍺.knight[H.Sq'a1';]
+        (H.sqs'c2 b3')A.eq ⍸⍺.knight[H.sq'a1';]
     }
 
     test_knight_in_the_centre_reaches_eight_squares←{
-        (H.Sqs'c2 e2 b3 f3 b5 f5 c6 e6')T.Eq ⍸⍺.knight[H.Sq'd4';]
+        (H.sqs'c2 e2 b3 f3 b5 f5 c6 e6')A.eq ⍸⍺.knight[H.sq'd4';]
     }
 
     ⍝ King
 
     test_king_in_the_corner_reaches_three_squares←{
-        (H.Sqs'b1 a2 b2')T.Eq ⍸⍺.king[H.Sq'a1';]
+        (H.sqs'b1 a2 b2')A.eq ⍸⍺.king[H.sq'a1';]
     }
 
     test_king_in_the_centre_reaches_eight_squares←{
-        (H.Sqs'd3 e3 f3 d4 f4 d5 e5 f5')T.Eq ⍸⍺.king[H.Sq'e4';]
+        (H.sqs'd3 e3 f3 d4 f4 d5 e5 f5')A.eq ⍸⍺.king[H.sq'e4';]
     }
 
     ⍝ Pawn captures: first axis is 1 for white, 2 for black.
 
     test_white_pawn_attacks_both_forward_diagonals←{
-        (H.Sqs'd3 f3')T.Eq ⍸⍺.pawn[1;H.Sq'e2';]
+        (H.sqs'd3 f3')A.eq ⍸⍺.pawn[1;H.sq'e2';]
     }
 
     test_white_pawn_on_the_a_file_attacks_one_square←{
-        (,H.Sq'b3')T.Eq ⍸⍺.pawn[1;H.Sq'a2';]
+        (,H.sq'b3')A.eq ⍸⍺.pawn[1;H.sq'a2';]
     }
 
     test_black_pawn_attacks_both_forward_diagonals←{
-        (H.Sqs'd6 f6')T.Eq ⍸⍺.pawn[2;H.Sq'e7';]
+        (H.sqs'd6 f6')A.eq ⍸⍺.pawn[2;H.sq'e7';]
     }
 
     test_black_pawn_on_the_h_file_attacks_one_square←{
-        (,H.Sq'g6')T.Eq ⍸⍺.pawn[2;H.Sq'h7';]
+        (,H.sq'g6')A.eq ⍸⍺.pawn[2;H.sq'h7';]
     }
 
     ⍝ Rays: ordered from the nearest square outwards.
@@ -67,11 +67,11 @@
     )
     test_rays←{
         (direction square expected)←⍵
-        (H.Sqs expected)T.Eq ⍺ Ray direction square
+        (H.sqs expected)A.eq ⍺ ray direction square
     }
 
     test_ray_off_the_board_is_empty←{
-        ⍬ T.Eq ⍺ Ray NORTH'a8'
+        ⍬ A.eq ⍺ ray NORTH'a8'
     }
 
 :EndNamespace

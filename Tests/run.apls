@@ -1,39 +1,46 @@
 ⍝ Runs every test suite (Tests/*Tests.apln) against APLSource.
 ⍝
-⍝ Usage: dyalogscript Tests/run.apls [filter] [-slow]
-⍝   filter  run only tests whose "Suite test name" contains this text,
-⍝           ignoring case
-⍝   -slow   include tests listed in a suite's Slow variable
+⍝ Usage: dyalogscript Tests/run.apls
 ⍝
 ⍝ Exits with code 1 if a file fails to load, or any test fails or errors.
 
 ⎕IO ⎕ML←1
 
+
+findFiles←{{⍵[⍋⍵]}⊆⊃0(⎕NINFO⍠1)⍵}
+
+SOURCE_TYPES←'.apln' '.aplc' '.apli' '.aplf' '.aplo'
+isSourceFile←{(⊂3⊃1 ⎕NPARTS ⍵)∊SOURCE_TYPES}
+
+loadFile←{
+    ⍝ ⍺ ←→ ⎕FIX mode: 1 (default) returns a reference to the single
+    ⍝      namespace in the file; 2 also accepts functions and operators
+    ⍝      and returns the names it established
+    ⍝ ← ←→ result of ⎕FIX, or ⍬ when the file fails to load
+    ⍺←1
+    fail←{⍬⊣⍞←'LOAD  ',⍺,': ',⍵,⎕UCS 10}
+    0::⍵ fail⊃⎕DMX.DM
+    r←⍺ ⎕FIX'file://',⍵
+    ⍝ 2 ⎕FIX reports some compile errors by establishing nothing
+    ⍝ rather than by signalling.
+    0≠≢r:r
+    ⍵ fail'nothing was established'
+}
+
 args←2 ⎕NQ'.' 'GetCommandLineArgs'
-testDir←⊃1 ⎕NPARTS⊃args
-root←⊃1 ⎕NPARTS ¯1↓testDir
-options←⎕NS''
-options.slow←(⊂'-slow')∊1↓args
-options.filter←{0=≢⍵:'' ⋄ ⊃⍵}(1↓args)~⊂'-slow'
+test_dir←⊃1 ⎕NPARTS⊃args
+root←⊃1 ⎕NPARTS ¯1↓test_dir
 
-Files←{{⍵[⍋⍵]}⊆⊃0(⎕NINFO⍠1)⍵}
+paths←findFiles root,'APLSource/*'
+sources←2 loadFile¨(isSourceFile¨paths)/paths
+support←loadFile¨test_dir∘,¨'Tester.apln' 'Assert.apln' 'Helpers.apln'
+suites←loadFile¨findFiles test_dir,'*Tests.apln'
+failed←∨/0=≢¨sources,support,suites
 
-loadErrors←0
-∇ ref←Load file
-  :Trap 0
-      ref←⊃⎕FIX'file://',file
-  :Else
-      ref←⍬
-      ⍞←'LOAD  ',file,': ',(⊃⎕DMX.DM),⎕UCS 10
-      loadErrors+←1
-  :EndTrap
-∇
+:if ~failed
+    suites←(0≠≢¨suites)/suites
+    results←Tester.run suites
+    failed∨←Tester.failed results
+:endIf
 
-_←Load¨Files root,'APLSource/*.apln'
-_←Load¨testDir∘,¨'Tester.apln' 'Helpers.apln'
-suites←Load¨Files testDir,'*Tests.apln'
-suites←(0≠≢¨suites)/suites
-
-results←options Tester.Run suites
-failed←(0<loadErrors)∨Tester.Failed results
 ⎕OFF(failed)
