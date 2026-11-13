@@ -104,4 +104,64 @@
         21 A.eq ≢(⍺ moves'6k1/8/8/8/8/7K/8/Q7 w - - 0 1')from'a1'
     }
 
+    ⍝ Castling
+    ⍝ A castling move is the king's two-square move, e.g. e1 g1 0.
+
+    test_white_castles_kingside←{
+        A.ok(⊂row'e1 g1')∊↓⍺ moves'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1'
+    }
+
+    test_white_castles_queenside←{
+        A.ok(⊂row'e1 c1')∊↓⍺ moves'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1'
+    }
+
+    test_black_castles_kingside←{
+        A.ok(⊂row'e8 g8')∊↓⍺ moves'r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1'
+    }
+
+    test_black_castles_queenside←{
+        A.ok(⊂row'e8 c8')∊↓⍺ moves'r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1'
+    }
+
+    test_king_with_both_castling_rights_has_seven_moves←{
+        (H.sqs'c1 d1 f1 g1 d2 e2 f2')A.eq(⍺ moves'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1')targets'e1'
+    }
+
+    test_king_cannot_castle_without_castling_rights←{
+        (H.sqs'd1 f1 d2 e2 f2')A.eq(⍺ moves'r3k2r/8/8/8/8/8/8/R3K2R w - - 0 1')targets'e1'
+    }
+
+    test_kingside_right_alone_does_not_permit_queenside_castling←{
+        (H.sqs'd1 f1 g1 d2 e2 f2')A.eq(⍺ moves'r3k2r/8/8/8/8/8/8/R3K2R w K - 0 1')targets'e1'
+    }
+
+    test_white_rights_do_not_let_black_castle←{
+        (H.sqs'd7 e7 f7 d8 f8')A.eq(⍺ moves'r3k2r/8/8/8/8/8/8/R3K2R b KQ - 0 1')targets'e8'
+    }
+
+    test_king_cannot_castle_kingside_through_a_piece←{
+        A.ok~(⊂row'e1 g1')∊↓⍺ moves'r3k2r/8/8/8/8/8/8/R3K1NR w KQkq - 0 1'
+    }
+
+    test_king_cannot_castle_queenside_when_b1_is_occupied←{
+        A.ok~(⊂row'e1 c1')∊↓⍺ moves'r3k2r/8/8/8/8/8/8/RN2K2R w KQkq - 0 1'
+    }
+
+    test_king_cannot_castle_out_of_check←{
+        targets←(⍺ moves'4k3/8/8/4r3/8/8/8/R3K2R w KQ - 0 1')targets'e1'
+        A.ok~∨/(H.sqs'c1 g1')∊targets
+    }
+
+    test_king_cannot_castle_kingside_across_an_attacked_square←{
+        A.ok~(⊂row'e1 g1')∊↓⍺ moves'4k3/8/8/5r2/8/8/8/R3K2R w KQ - 0 1'
+    }
+
+    test_king_cannot_castle_queenside_across_an_attacked_square←{
+        A.ok~(⊂row'e1 c1')∊↓⍺ moves'4k3/8/8/3r4/8/8/8/R3K2R w KQ - 0 1'
+    }
+
+    test_attacked_b1_does_not_prevent_queenside_castling←{
+        A.ok(⊂row'e1 c1')∊↓⍺ moves'4k3/8/8/1r6/8/8/8/R3K2R w KQ - 0 1'
+    }
+
 :EndNamespace
