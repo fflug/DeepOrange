@@ -2,6 +2,7 @@
     ⎕IO ⎕ML←1
     A←#.Assert
     H←#.Helpers
+    G←#.GameState
 
     ⍝ moves are rows of (from to promotion); promotion is 0 for a
     ⍝ non-promoting move, otherwise the piece type promoted to.
@@ -161,6 +162,113 @@
 
     test_white_pieces_attack_when_white_is_the_attacking_side←{
         (,1)A.eq ⍺ attacked'k7/8/8/8/8/8/8/R6K w - - 0 1' 'a4' 0
+    }
+
+    ⍝ Making moves
+
+    play←{
+        ⍝ ⍵ ←→ FEN, move as 'from to', promotion (0 for none)
+        ⍝ ← ←→ bitboards, game state after the move
+        (fen squares promotion)←⍵
+        (#.Board.initFromFEN fen)#.MoveGeneration.makeMove(H.sqs squares),promotion
+    }
+
+    on←{
+        ⍝ ⍺ ←→ bitboards, game state
+        ⍝ ⍵ ←→ square names
+        ⍝ ← ←→ piece on each square, 0 when empty
+        (⍳12)+.×(⊃⍺)[;H.sqs ⍵]
+    }
+
+    state←{
+        ⍝ ⍺ ←→ bitboards, game state
+        ⍝ ⍵ ←→ game state index, e.g. G.side
+        (2⊃⍺)[⍵]
+    }
+
+    CASTLING←'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1'
+
+    test_moves_the_piece_to_its_destination←{
+        (0,#.Pieces.N)A.eq(play H.START'g1 f3' 0)on'g1 f3'
+    }
+
+    test_capture_leaves_only_the_capturing_piece_on_the_destination←{
+        position←play'k7/8/8/3p4/4P3/8/8/K7 w - - 0 1' 'e4 d5' 0
+        1 A.eq+/(⊃position)[;H.sq'd5']
+    }
+
+    test_en_passant_removes_the_pawn_behind_the_destination←{
+        (0 0,#.Pieces.P)A.eq(play'k7/8/8/3pP3/8/8/8/K7 w - d6 0 1' 'e5 d6' 0)on'e5 d5 d6'
+    }
+
+    test_promotion_replaces_the_pawn_with_the_promoted_piece←{
+        position←play'k7/8/8/8/8/8/4p3/K4N2 b - - 0 1' 'e2 f1'#.Pieces.n
+        (0,#.Pieces.n)A.eq position on'e2 f1'
+    }
+
+    test_white_kingside_castling_moves_the_rook_to_f1←{
+        #.Pieces.(0 R K 0)A.eq(play CASTLING'e1 g1' 0)on'e1 f1 g1 h1'
+    }
+
+    test_white_queenside_castling_moves_the_rook_to_d1←{
+        #.Pieces.(0 0 K R 0)A.eq(play CASTLING'e1 c1' 0)on'a1 b1 c1 d1 e1'
+    }
+
+    test_black_kingside_castling_moves_the_rook_to_f8←{
+        fen←'r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1'
+        #.Pieces.(0 r k 0)A.eq(play fen'e8 g8' 0)on'e8 f8 g8 h8'
+    }
+
+    test_king_move_clears_both_castling_rights_of_its_side←{
+        0 0 1 1 A.eq(play CASTLING'e1 e2' 0)state G.castling_rights
+    }
+
+    test_rook_move_clears_the_castling_right_on_its_side←{
+        0 1 1 1 A.eq(play CASTLING'h1 h2' 0)state G.castling_rights
+    }
+
+    test_capturing_a_rook_on_its_home_square_clears_that_castling_right←{
+        1 0 1 0 A.eq(play CASTLING'a1 a8' 0)state G.castling_rights
+    }
+
+    test_other_moves_keep_castling_rights←{
+        1 1 1 1 A.eq(play H.START'g1 f3' 0)state G.castling_rights
+    }
+
+    test_double_pawn_push_sets_the_en_passant_square←{
+        (H.sq'e3')A.eq(play H.START'e2 e4' 0)state G.en_passant_square
+    }
+
+    test_single_pawn_push_sets_no_en_passant_square←{
+        0 A.eq(play H.START'e2 e3' 0)state G.en_passant_square
+    }
+
+    test_any_other_move_clears_the_en_passant_square←{
+        0 A.eq(play'k7/8/8/3pP3/8/8/8/K7 w - d6 0 1' 'a1 a2' 0)state G.en_passant_square
+    }
+
+    test_side_to_move_changes←{
+        1 A.eq(play H.START'g1 f3' 0)state G.side
+    }
+
+    test_quiet_piece_move_increments_the_halfmove_clock←{
+        6 A.eq(play'k7/8/8/8/8/8/8/K5N1 w - - 5 9' 'g1 f3' 0)state G.halfmove
+    }
+
+    test_pawn_move_resets_the_halfmove_clock←{
+        0 A.eq(play'k7/8/8/8/8/8/4P3/K7 w - - 5 9' 'e2 e3' 0)state G.halfmove
+    }
+
+    test_capture_resets_the_halfmove_clock←{
+        0 A.eq(play'k7/8/8/3p4/8/8/8/K2R4 w - - 5 9' 'd1 d5' 0)state G.halfmove
+    }
+
+    test_white_move_keeps_the_fullmove_number←{
+        9 A.eq(play'k7/8/8/8/8/8/8/K5N1 w - - 5 9' 'g1 f3' 0)state G.fullmove
+    }
+
+    test_black_move_increments_the_fullmove_number←{
+        10 A.eq(play'k7/8/8/8/8/8/8/K5N1 b - - 5 9' 'a8 b8' 0)state G.fullmove
     }
 
     ⍝ Castling
