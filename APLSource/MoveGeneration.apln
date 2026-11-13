@@ -165,7 +165,40 @@
     }
  
     makeMove←{
+        ⍝ ⍺ ←→ bitboards, game state
+        ⍝ ⍵ ←→ move (from to promotion), as from generatePseudoLegalMoves
+        ⍝ ← ←→ bitboards, game state after the move
+        (bitboards game_state)←⍺
+        (from to promotion)←⍵
+        P←##.Pieces
+        G←##.GameState
+        side←game_state[G.side]
+        offset←6×side
+        piece←⊃⍸bitboards[;from]
+        pawn←piece=offset+P.P
+        capture←∨/bitboards[;to]
 
+        ⍝ An en passant capture removes the pawn behind the destination.
+        en_passant←pawn∧to=game_state[G.en_passant_square]
+        captured←to-en_passant×8-16×side
+        bitboards[;from,to,captured]←0
+        bitboards[piece promotion⊃⍨1+promotion≠0;to]←1
+
+        ⍝ Castling is the only king move of two files; the rook moves
+        ⍝ to the square the king crosses.
+        castling←(piece=offset+P.K)∧2=|to-from
+        rook_from_to←from+((1+to>from)⊃¯4 3),(to-from)÷2
+        bitboards[offset+P.R;castling/rook_from_to]←castling/0 1
+
+        ⍝ A right is lost once its king or rook square is left or
+        ⍝ entered: by a king move, a rook move, or a rook capture.
+        home←(5 8)(5 1)(61 64)(61 57)
+        game_state[G.castling_rights]∧←~∨/¨home∊¨⊂from to
+        game_state[G.en_passant_square]←(pawn∧16=|to-from)×(from+to)÷2
+        game_state[G.halfmove]←(~pawn∨capture)×1+game_state[G.halfmove]
+        game_state[G.fullmove]+←side
+        game_state[G.side]←~side
+        bitboards game_state
     }
  
  
