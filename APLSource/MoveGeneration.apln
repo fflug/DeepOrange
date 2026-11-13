@@ -28,9 +28,37 @@
 
         pawn_moves←lookups generatePseudoLegalPawnMoves bitboards occupied enemy side offset (game_state[##.GameState.en_passant_square])
 
-        (piece_moves,0)⍪pawn_moves
+        rights←game_state[##.GameState.castling_rights][(2×side)+⍳2]
+        castling_moves←lookups generateCastlingMoves bitboards occupied side rights
 
+        (piece_moves,0)⍪pawn_moves⍪castling_moves
+    }
 
+    generateCastlingMoves←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ bitboards, occupancy, side to move,
+        ⍝      castling rights of the side to move (kingside queenside)
+        ⍝ ← ←→ matrix of (from to promotion), as for generatePseudoLegalMoves
+
+        (bitboards occupied side rights)←⍵
+        ~∨/rights:0 3⍴0
+        rank←56×side
+        king←rank+5
+
+        ⍝ List the relevant squares.
+        ⍝ Kingside then queenside, in the order of rights.
+        to←rank+7 3
+        between←rank+(6 7)(2 3 4)
+        crossed←rank+6 4
+        
+        ⍝ No pieces between king and rook.
+        clear←{~∨/occupied[⍵]}¨between
+        
+        ⍝ King is not in check and all squares which the king crosses are not attacked.
+        ⍝ As for all pseudo legal moves, the legality filter checks if castling leaves the king in check.
+        attacked←⍺ checkSquareAttacked bitboards(king,crossed)(1-side)
+        safe←(~⊃attacked)∧~1↓attacked
+        (king,⍪(rights∧clear∧safe)/to),0
     }
 
     expand←{
@@ -132,13 +160,13 @@
         ∨/hits
     }
  
-    ∇ perft board
-   
-    ∇
+    perft←{
+        
+    }
  
-    ∇ new_board←board makeMove move
-    
-    ∇
+    makeMove←{
+
+    }
  
  
 :EndNamespace
