@@ -106,10 +106,30 @@
     }
 
     checkSquareAttacked←{
-        ⍝ ⍺ ←→
-        ⍝ ⍵ ←→
-        ⍝ ← ←→
-        ()
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ bitboards, squares, attacking side (0 white, 1 black)
+        ⍝ ← ←→ boolean vector, one item per square; 1 if any piece of
+        ⍝      the attacking side attacks that square
+        
+        (bitboards squares side)←⍵
+        squares←,squares
+        P←##.Pieces
+        L←##.LookupTables
+        attacker←bitboards[(6×side)+⍳6;]
+        occupied←∨⌿bitboards
+
+        ⍝ Attacks are symmetric: a piece on s attacks t exactly when the
+        ⍝ same piece on t attacks s. Each square therefore looks outward
+        ⍝ with every piece type and checks for an attacker of that type.
+        hits←⍺.knight[squares;]∧⍤1⊢attacker[P.N;]
+        hits∨←⍺.king[squares;]∧⍤1⊢attacker[P.K;]
+        hits∨←(⍺ generateSlidingAttacks squares L.diagonal occupied)∧⍤1⊢∨⌿attacker[P.(B Q);]
+        hits∨←(⍺ generateSlidingAttacks squares L.orthogonal occupied)∧⍤1⊢∨⌿attacker[P.(R Q);]
+        
+        ⍝ Pawns are the exception, as they attack forward only; the
+        ⍝ defending side's pawn table gives the reverse direction.
+        hits∨←⍺.pawn[2-side;squares;]∧⍤1⊢attacker[P.P;]
+        ∨/hits
     }
  
     ∇ perft board

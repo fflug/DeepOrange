@@ -104,6 +104,65 @@
         21 A.eq ≢(⍺ moves'6k1/8/8/8/8/7K/8/Q7 w - - 0 1')from'a1'
     }
 
+    ⍝ Attacked squares
+
+    attacked←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ FEN, square names, attacking side (0 white, 1 black)
+        ⍝ ← ←→ one boolean per square name
+        (fen names side)←⍵
+        bitboards←⊃#.Board.initFromFEN fen
+        ⍺ #.MoveGeneration.checkSquareAttacked bitboards(H.sqs names)side
+    }
+
+    test_square_far_from_all_pieces_is_not_attacked←{
+        (,0)A.eq ⍺ attacked'4k3/8/8/8/8/8/8/4K3 w - - 0 1' 'd4' 1
+    }
+
+    test_white_pawn_attacks_diagonally_forward_only←{
+        1 0 1 0 A.eq ⍺ attacked'k7/8/8/8/4P3/8/8/K7 w - - 0 1' 'd5 e5 f5 d3' 0
+    }
+
+    test_black_pawn_attacks_diagonally_towards_rank_one←{
+        1 0 1 0 A.eq ⍺ attacked'k7/8/8/4p3/8/8/8/K7 w - - 0 1' 'd4 e4 f4 d6' 1
+    }
+
+    test_knight_attacks_its_jump_squares←{
+        1 1 0 A.eq ⍺ attacked'k7/8/8/8/8/8/8/K5n1 w - - 0 1' 'f3 h3 g3' 1
+    }
+
+    test_king_attacks_adjacent_squares←{
+        1 1 0 A.eq ⍺ attacked'k7/8/8/8/8/8/8/K7 w - - 0 1' 'b8 b7 c8' 1
+    }
+
+    test_rook_attack_stops_at_the_first_piece←{
+        1 1 0 A.eq ⍺ attacked'k7/8/8/8/N7/8/8/r6K w - - 0 1' 'a3 a4 a5' 1
+    }
+
+    test_rook_does_not_attack_diagonally←{
+        (,0)A.eq ⍺ attacked'k7/8/8/8/8/8/8/r6K w - - 0 1' 'b2' 1
+    }
+
+    test_bishop_attack_stops_at_the_first_piece←{
+        1 1 0 A.eq ⍺ attacked'k7/8/8/8/8/4P3/8/2b4K w - - 0 1' 'd2 e3 f4' 1
+    }
+
+    test_bishop_does_not_attack_orthogonally←{
+        (,0)A.eq ⍺ attacked'k7/8/8/8/8/8/8/2b4K w - - 0 1' 'c2' 1
+    }
+
+    test_queen_attacks_orthogonally_and_diagonally←{
+        1 1 0 A.eq ⍺ attacked'k7/8/8/8/8/8/8/3q3K w - - 0 1' 'd5 g4 e3' 1
+    }
+
+    test_pieces_of_the_other_side_do_not_count_as_attackers←{
+        (,0)A.eq ⍺ attacked'k7/8/8/8/8/8/8/R6K w - - 0 1' 'a4' 1
+    }
+
+    test_white_pieces_attack_when_white_is_the_attacking_side←{
+        (,1)A.eq ⍺ attacked'k7/8/8/8/8/8/8/R6K w - - 0 1' 'a4' 0
+    }
+
     ⍝ Castling
     ⍝ A castling move is the king's two-square move, e.g. e1 g1 0.
 
