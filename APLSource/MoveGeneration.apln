@@ -97,7 +97,7 @@
 
         ⍝ A pawn reaching rank 1 or 8 yields one move per promotion piece.
         promotions←1 8∊⍨⌈pawn_moves[;2]÷8
-        promoting←(pawn_moves⌿⍨4×promotions),(4×+/promotions)⍴P.(Q R B N)
+        promoting←(pawn_moves⌿⍨4×promotions),(4×+/promotions)⍴offset+P.(Q R B N)
         pawn_moves←promoting⍪(~promotions)⌿pawn_moves,0
 
         pawn_moves
@@ -161,7 +161,7 @@
     }
  
     perft←{
-        
+
     }
  
     makeMove←{
