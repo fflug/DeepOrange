@@ -200,7 +200,39 @@
         game_state[G.side]←~side
         bitboards game_state
     }
- 
- 
+
+    generateLegalMoves←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ bitboards, game state
+        ⍝ ← ←→ matrix of (from to promotion); promotion is 0 for a
+        ⍝      non-promoting move, otherwise the piece type promoted to
+
+        lookups←⍺
+        (bitboards game_state)←⍵
+        
+        pseudo_legal_moves←lookups generatePseudoLegalMoves bitboards game_state
+        0=≢pseudo_legal_moves:0 3⍴0
+
+        legal←lookups bitboards game_state∘checkMoveIsLegal⍤1⊢pseudo_legal_moves
+        legal⌿pseudo_legal_moves
+    }
+
+    checkMoveIsLegal←{
+        ⍝ A move is legal when, after it is made, the moving side's
+        ⍝ king is not attacked.
+        ⍝ ⍺ ←→ lookup tables, bitboards, game state
+        ⍝ ⍵ ←→ move
+        ⍝ ← ←→ 1 if the move does not leave the moving side's king attacked
+
+        (lookups bitboards game_state)←⍺
+        move←⍵
+
+        side←game_state[##.GameState.side]
+        king←(6×side)+##.Pieces.K
+
+        bitboards_after←⊃bitboards game_state makeMove move
+
+        ~⊃lookups checkSquareAttacked bitboards_after (⍸bitboards_after[king;])(~side)
+    }
 :EndNamespace
  
