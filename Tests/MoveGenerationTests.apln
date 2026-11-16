@@ -331,4 +331,71 @@
         A.ok(⊂row'e1 c1')∊↓⍺ moves'4k3/8/8/1r6/8/8/8/R3K2R w KQ - 0 1'
     }
 
+    ⍝ Legal moves
+    ⍝ A legal move is a pseudo-legal move that does not leave the
+    ⍝ moving side's king attacked.
+
+    legal←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ FEN
+        H.sortRows ⍺ #.MoveGeneration.generateLegalMoves #.Board.initFromFEN ⍵
+    }
+
+    test_start_position_has_twenty_legal_moves←{
+        20 A.eq ≢⍺ legal H.START
+    }
+
+    test_pinned_knight_has_no_legal_moves←{
+        ⍬ A.eq(⍺ legal'k7/8/8/8/4r3/8/4N3/4K3 w - - 0 1')targets'e2'
+    }
+
+    test_pinned_rook_moves_only_along_the_pin_line←{
+        (H.sqs'e3 e4 e5 e6 e7')A.eq(⍺ legal'k7/4r3/8/8/8/8/4R3/4K3 w - - 0 1')targets'e2'
+    }
+
+    test_pinned_black_bishop_has_no_legal_moves←{
+        ⍬ A.eq(⍺ legal'k7/b7/8/8/8/8/8/R6K b - - 0 1')targets'a7'
+    }
+
+    test_king_cannot_move_onto_an_attacked_square←{
+        (,H.sq'b1')A.eq(⍺ legal'k7/8/8/8/8/8/2r5/K7 w - - 0 1')targets'a1'
+    }
+
+    test_moves_that_ignore_a_check_are_excluded←{
+        expected←H.sortRows↑row¨'e1 d2' 'e1 e2' 'e1 f2'
+        expected A.eq ⍺ legal'4k3/8/8/8/8/8/P7/4K2r w - - 0 1'
+    }
+
+    test_check_can_be_blocked←{
+        (,H.sq'f1')A.eq(⍺ legal'4k3/8/8/8/8/3B4/8/4K2r w - - 0 1')targets'd3'
+    }
+
+    test_king_can_capture_an_undefended_checking_piece←{
+        (1 3⍴row'a1 b2')A.eq ⍺ legal'k7/8/8/8/8/8/1r6/K7 w - - 0 1'
+    }
+
+    test_king_cannot_capture_a_defended_piece←{
+        A.ok~(⊂row'a1 b2')∊↓⍺ legal'k7/8/8/8/8/2p5/1r6/K7 w - - 0 1'
+    }
+
+    test_en_passant_that_exposes_the_king_along_the_rank_is_excluded←{
+        A.ok~(⊂row'e5 d6')∊↓⍺ legal'k7/8/8/K2pP2r/8/8/8/8 w - d6 0 1'
+    }
+
+    test_king_cannot_castle_onto_an_attacked_square←{
+        A.ok~(⊂row'e1 g1')∊↓⍺ legal'4k1r1/8/8/8/8/8/8/R3K2R w KQ - 0 1'
+    }
+
+    test_castling_is_legal_when_no_square_is_attacked←{
+        A.ok∧/(row¨'e1 g1' 'e1 c1')∊↓⍺ legal'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1'
+    }
+
+    test_checkmate_has_no_legal_moves←{
+        0 3 A.eq⍴⍺ legal'R5k1/5ppp/8/8/8/8/8/6K1 b - - 0 1'
+    }
+
+    test_stalemate_has_no_legal_moves←{
+        0 3 A.eq⍴⍺ legal'k7/8/1Q6/8/8/8/8/7K b - - 0 1'
+    }
+
 :EndNamespace
