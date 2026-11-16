@@ -161,9 +161,27 @@
     }
  
     perft←{
+        ⍝ Performance test: counts the leaf nodes of the legal move tree
+        ⍝ to a fixed depth. Comparing the counts with published reference
+        ⍝ values verifies move generation.
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ depth, bitboards, game state
+        ⍝ ← ←→ number of leaf positions reachable in exactly depth plies
 
+        lookups←⍺
+        (depth bitboards game_state)←⍵
+
+        ⍝ At depth 0 the position itself is the only leaf.
+        depth=0:1
+        legal_moves←lookups generateLegalMoves bitboards game_state
+
+        0=≢legal_moves:0
+        
+        ⍝ At depth 1 each legal move is one leaf, so the moves need not be made.
+        depth=1:≢legal_moves
+        +/lookups∘perft¨(depth-1),¨↓bitboards game_state∘makeMove⍤1⊢legal_moves
     }
- 
+
     makeMove←{
         ⍝ ⍺ ←→ bitboards, game state
         ⍝ ⍵ ←→ move (from to promotion), as from generatePseudoLegalMoves
