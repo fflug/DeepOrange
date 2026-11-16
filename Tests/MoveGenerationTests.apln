@@ -398,4 +398,49 @@
         0 3 A.eq⍴⍺ legal'k7/8/1Q6/8/8/8/8/7K b - - 0 1'
     }
 
+    ⍝ Perft
+    ⍝ Expected counts are the published reference values for each
+    ⍝ position. Depths are kept low so the suite stays fast.
+
+    perft←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ FEN, depth
+        (fen depth)←⍵
+        ⍺ #.MoveGeneration.perft depth,#.Board.initFromFEN fen
+    }
+
+    KIWIPETE←'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1'
+
+    test_perft_at_depth_zero_counts_the_position_itself←{
+        1 A.eq ⍺ perft H.START 0
+    }
+
+    test_perft_at_depth_one_counts_the_legal_moves←{
+        20 A.eq ⍺ perft H.START 1
+    }
+
+    test_perft_of_a_position_with_no_legal_moves_is_zero←{
+        0 A.eq ⍺ perft'k7/8/1Q6/8/8/8/8/7K b - - 0 1' 1
+    }
+
+    test_perft_of_the_start_position_at_depth_three←{
+        8902 A.eq ⍺ perft H.START 3
+    }
+
+    test_perft_of_kiwipete_at_depth_two←{
+        2039 A.eq ⍺ perft KIWIPETE 2
+    }
+
+    test_perft_of_the_rook_and_pawn_endgame_at_depth_three←{
+        2812 A.eq ⍺ perft'8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1' 3
+    }
+
+    test_perft_of_the_promotion_position_at_depth_two←{
+        264 A.eq ⍺ perft'r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1' 2
+    }
+
+    test_perft_of_the_discovered_check_position_at_depth_two←{
+        1486 A.eq ⍺ perft'rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8' 2
+    }
+
 :EndNamespace
