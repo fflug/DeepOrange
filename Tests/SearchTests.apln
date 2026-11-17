@@ -1,0 +1,54 @@
+:Namespace SearchTests
+    ⎕IO ⎕ML←1
+    A←#.Assert
+    H←#.Helpers
+
+    setup←{#.LookupTables.createLookupTables ⍬}
+
+    pick←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ FEN
+        ⍺ #.Search.randomMove #.Board.initFromFEN ⍵
+    }
+
+    legal←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ FEN
+        ↓⍺ #.MoveGeneration.generateLegalMoves #.Board.initFromFEN ⍵
+    }
+
+    test_returns_a_legal_move←{
+        A.ok(⊂⍺ pick H.START)∊⍺ legal H.START
+    }
+
+    test_returns_a_legal_move_for_black←{
+        fen←'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'
+        A.ok(⊂⍺ pick fen)∊⍺ legal fen
+    }
+
+    test_returns_a_three_item_move_vector←{
+        (,3)A.eq⍴⍺ pick H.START
+    }
+
+    test_returns_the_only_legal_move←{
+        ⍝ The rook on the b-file leaves the king a single square.
+        ((H.sqs'a8 a7'),0)A.eq ⍺ pick'k7/8/8/8/8/8/8/1R5K b - - 0 1'
+    }
+
+    test_chooses_every_legal_move_over_many_draws←{
+        ⍝ With 20 equally likely moves, 1000 draws miss a given move with
+        ⍝ probability (19÷20)*1000, below 1E¯22.
+        lookups←⍺
+        drawn←∪{lookups pick H.START}¨⍳1000
+        A.ok(⍺ legal H.START)≡⍥{⍵[⍋⍵]}drawn
+    }
+
+    test_returns_an_empty_vector_when_checkmated←{
+        ⍬ A.eq ⍺ pick'k7/1Q6/1K6/8/8/8/8/8 b - - 0 1'
+    }
+
+    test_returns_an_empty_vector_when_stalemated←{
+        ⍬ A.eq ⍺ pick'k7/8/1Q6/8/8/8/8/7K b - - 0 1'
+    }
+
+:EndNamespace
