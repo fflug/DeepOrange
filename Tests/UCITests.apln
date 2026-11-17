@@ -49,4 +49,25 @@
         mv A.eq side #.UCI.uciToMove uci
     }
 
+    ⍝ applyMoves
+
+    ⍝ Each case: start FEN, moves, FEN of the expected position.
+    test_applies_moves_to_a_position_cases←(
+        ('no moves'(H.START(0⍴⊂'')H.START))
+        ('single move as a plain string'(H.START'e2e4' 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
+        ('single move as a one-item vector'(H.START(,⊂'e2e4')'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
+        ('moves in the order played'(H.START('e2e4' 'e7e5' 'g1f3')'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2'))
+        ('capture'('rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2' 'e4d5' 'rnbqkbnr/ppp1pppp/8/3P4/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2'))
+        ('en passant capture'('k7/8/8/3pP3/8/8/8/K7 w - d6 0 1' 'e5d6' 'k7/8/3P4/8/8/8/8/K7 b - - 0 1'))
+        ('white kingside castling'('r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1' 'e1g1' 'r3k2r/8/8/8/8/8/8/R4RK1 b kq - 1 1'))
+        ('black queenside castling'('r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1' 'e8c8' '2kr3r/8/8/8/8/8/8/R3K2R w KQ - 1 2'))
+        ('white promotion'('k7/4P3/8/8/8/8/8/K7 w - - 0 1' 'e7e8n' 'k3N3/8/8/8/8/8/8/K7 b - - 0 1'))
+        ('black promotion'('k7/8/8/8/8/8/3p4/K7 b - - 0 1' 'd2d1q' 'k7/8/8/8/8/8/8/K2q4 w - - 0 2'))
+        ('promotions by both sides in one list'('8/3P4/8/8/k7/7K/3p4/8 w - - 0 1'('d7d8q' 'd2d1q')'3Q4/8/8/8/k7/7K/8/3q4 w - - 0 2'))
+    )
+    test_applies_moves_to_a_position←{
+        (start moves expected)←⍵
+        (#.Board.initFromFEN expected)A.eq(#.Board.initFromFEN start)#.UCI.applyMoves moves
+    }
+
 :EndNamespace

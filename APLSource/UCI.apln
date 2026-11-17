@@ -1,5 +1,23 @@
 :Namespace UCI
 
+    applyMoves←{
+        ⍝ ⍺ ←→ bitboards, game state
+        ⍝ ⍵ ←→ a UCI move string, or a vector of them in order played
+        ⍝ ← ←→ bitboards, game state after the moves
+
+        ⍝ Reduction runs right to left, so the moves are reversed and the
+        ⍝ position placed last to apply the first move first.
+        ⊃applyMove⍨/(⌽,⊆⍵),⊂⍺
+    }
+
+    applyMove←{
+        ⍝ ⍺ ←→ bitboards, game state
+        ⍝ ⍵ ←→ UCI move string
+        ⍝ ← ←→ bitboards, game state after the move
+        side←(2⊃⍺)[##.GameState.side]
+        ⍺ ##.MoveGeneration.makeMove side uciToMove ⍵
+    }
+
     squareToIndex←{
         ⍝ Algebraic square name to board index; a1 ←→ 1, h1 ←→ 8, a2 ←→ 9, h8 ←→ 64.
         ⍝ ⍵ ←→ square name, e.g. 'e4'
