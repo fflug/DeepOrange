@@ -1,3 +1,48 @@
 :Namespace UCI
-    
+
+    squareToIndex←{
+        ⍝ Algebraic square name to board index; a1 ←→ 1, h1 ←→ 8, a2 ←→ 9, h8 ←→ 64.
+        ⍝ ⍵ ←→ square name, e.g. 'e4'
+        ⍝ ← ←→ index of square
+
+        ('abcdefgh'⍳⊃⍵)+8×¯1+'12345678'⍳⊃⌽⍵
+    }
+
+    indexToSquare←{
+        ⍝ board index to algebraic square name
+        ⍝ ⍵ ←→ board index
+        ⍝ ← ←→ algebraic square name
+
+        ⍝ Indices are one-indexed, so 8|⍵ is 0 for the h-file.
+        file←'habcdefg'[1+8|⍵]
+        rank←⍕⌈⍵÷8
+        file,rank
+    }
+
+    uciToMove←{
+        ⍝ UCI move format to internal move format
+        ⍝ ⍺ ←→ side to play
+        ⍝ ⍵ ←→ UCI format
+        ⍝ ← ←→ internal format
+
+        from←squareToIndex 2↑⍵
+        to←squareToIndex 2↓4↑⍵
+        4=≢⍵:from to 0
+        promotion←('pnbrqk'⍳⊃⌽⍵)⊃##.Pieces.(P N B R Q K)+6×⍺
+        from to promotion
+    }
+
+
+    moveToUCI←{
+        ⍝ Internal move format to UCI move fomat
+        ⍝ ⍵ ←→ internal format
+        ⍝ ← ←→ uci format
+
+        uci←∊indexToSquare¨2↑⍵
+        promotion←⊃⌽⍵
+        promotion=0:uci
+        uci,←'pnbrqkpnbrqk'[##.Pieces.(P N B R Q K p n b r q k)⍳⊃⌽⍵]
+        uci
+    }
+
 :EndNamespace
