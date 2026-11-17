@@ -1,3 +1,13 @@
 :Namespace Search
     ⎕IO ⎕ML←1
+
+    randomMove←{
+        ⍝ ⍺ ←→ lookups
+        ⍝ ⍵ ←→ bitboards, game state
+        ⍝ ← ←→ random legal move
+        
+        moves←⍺ ##.MoveGeneration.generateLegalMoves ⍵
+        0=≢moves:⍬
+        moves[?≢moves;]
+    }
 :EndNamespace
