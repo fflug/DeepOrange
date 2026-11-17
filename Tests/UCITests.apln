@@ -1,0 +1,52 @@
+:Namespace UCITests
+    ⎕IO ⎕ML←1
+    A←#.Assert
+    H←#.Helpers
+    P←#.Pieces
+
+    ⍝ A move is (from to promotion), as produced by MoveGeneration.
+    ⍝ UCI long algebraic notation names the from and to squares, plus a
+    ⍝ lowercase piece letter for a promotion. Castling is written as the
+    ⍝ king's two-square move. The promotion piece in a move carries its
+    ⍝ colour, so converting from UCI needs the side to move.
+
+    move←{
+        ⍝ ⍵ ←→ 'from to', promotion (0 for none)
+        ⍝ ← ←→ move (from to promotion)
+        (squares promotion)←⍵
+        (H.sqs squares),promotion
+    }
+
+    ⍝ Each case: side to move (0 white, 1 black), move, UCI string.
+    CASES←(
+        ('quiet pawn push'(0(move'e2 e4' 0)'e2e4'))
+        ('quiet knight move'(1(move'g8 f6' 0)'g8f6'))
+        ('capture'(0(move'e4 d5' 0)'e4d5'))
+        ('en passant capture'(0(move'e5 d6' 0)'e5d6'))
+        ('white kingside castling'(0(move'e1 g1' 0)'e1g1'))
+        ('white queenside castling'(0(move'e1 c1' 0)'e1c1'))
+        ('black kingside castling'(1(move'e8 g8' 0)'e8g8'))
+        ('black queenside castling'(1(move'e8 c8' 0)'e8c8'))
+        ('white promotion to queen'(0(move'e7 e8'P.Q)'e7e8q'))
+        ('white promotion to rook'(0(move'e7 e8'P.R)'e7e8r'))
+        ('white promotion to bishop'(0(move'e7 e8'P.B)'e7e8b'))
+        ('white promotion to knight'(0(move'e7 e8'P.N)'e7e8n'))
+        ('black promotion to queen'(1(move'd2 d1'P.q)'d2d1q'))
+        ('black promotion to knight'(1(move'd2 d1'P.n)'d2d1n'))
+        ('promotion with capture'(0(move'g7 h8'P.Q)'g7h8q'))
+        ('corner squares'(0(move'a1 h8' 0)'a1h8'))
+    )
+
+    test_writes_a_move_in_uci_notation_cases←CASES
+    test_writes_a_move_in_uci_notation←{
+        (side mv uci)←⍵
+        uci A.eq #.UCI.moveToUCI mv
+    }
+
+    test_reads_a_move_from_uci_notation_cases←CASES
+    test_reads_a_move_from_uci_notation←{
+        (side mv uci)←⍵
+        mv A.eq side #.UCI.uciToMove uci
+    }
+
+:EndNamespace
