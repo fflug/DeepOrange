@@ -4,6 +4,8 @@
     H←#.Helpers
     P←#.Pieces
 
+    setup←{#.LookupTables.createLookupTables ⍬}
+
     ⍝ A move is (from to promotion), as produced by MoveGeneration.
     ⍝ UCI long algebraic notation names the from and to squares, plus a
     ⍝ lowercase piece letter for a promotion. Castling is written as the
@@ -93,6 +95,135 @@
     test_parses_position_arguments←{
         (args expected)←⍵
         (#.Board.initFromFEN expected)A.eq #.UCI.parsePosition words args
+    }
+
+    ⍝ handle
+
+    ⍝ The engine state is created by newState and passed through handle,
+    ⍝ which returns the next state and the reply lines for one input line.
+
+    session←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ input line, or a vector of them in the order sent
+        ⍝ ← ←→ state after the last line, replies to the last line
+        ⊃step/(⌽,⊆⍵),⊂(#.UCI.newState ⍺)⍬
+    }
+
+    step←{
+        ⍝ ⍺ ←→ input line
+        ⍝ ⍵ ←→ state, replies to the previous line
+        ⍝ ← ←→ state, replies to this line
+        (⊃⍵)#.UCI.handle ⍺
+    }
+
+    replies←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ input line, or a vector of them
+        ⍝ ← ←→ replies to the last line
+        2⊃⍺ session ⍵
+    }
+
+    bestmove←{
+        ⍝ ⍵ ←→ replies to go
+        ⍝ ← ←→ move named by the single bestmove reply
+        1≠≢⍵:A.fail'expected one reply but got ',⍕≢⍵
+        reply←⊃⍵
+        ~'bestmove '≡9↑reply:A.fail'expected bestmove but got ',reply
+        9↓reply
+    }
+
+    isLegal←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ FEN, UCI move
+        (fen uci)←⍵
+        position←#.Board.initFromFEN fen
+        side←(2⊃position)[#.GameState.side]
+        (⊂side #.UCI.uciToMove uci)∊↓⍺ #.MoveGeneration.generateLegalMoves position
+    }
+
+    ⍝ A position where the side to move has exactly one legal move, a8a7.
+    ONE_MOVE←'k7/8/8/8/8/8/8/1R5K b - - 0 1'
+
+    test_uci_identifies_the_engine_by_name←{
+        A.ok'id name '≡8↑⊃⍺ replies'uci'
+    }
+
+    test_uci_identifies_the_author←{
+        A.ok'id author '≡10↑2⊃⍺ replies'uci'
+    }
+
+    test_uci_ends_with_uciok←{
+        'uciok'A.eq⊃⌽⍺ replies'uci'
+    }
+
+    test_isready_replies_readyok←{
+        (,⊂'readyok')A.eq ⍺ replies'isready'
+    }
+
+    test_go_replies_with_a_legal_move_from_the_start_position←{
+        A.ok ⍺ isLegal H.START(bestmove ⍺ replies'go')
+    }
+
+    test_go_ignores_search_parameters←{
+        A.ok ⍺ isLegal H.START(bestmove ⍺ replies'go wtime 60000 btime 60000 winc 0 binc 0')
+    }
+
+    test_position_has_no_reply←{
+        0 A.eq≢⍺ replies'position startpos moves e2e4'
+    }
+
+    test_go_plays_from_a_position_given_by_fen←{
+        'a8a7'A.eq bestmove ⍺ replies('position fen ',ONE_MOVE)'go'
+    }
+
+    test_go_plays_from_a_position_after_its_moves←{
+        ⍝ After b2b1 the black king on a8 has only a7.
+        lines←'position fen k7/8/8/8/8/8/1R6/7K w - - 0 1 moves b2b1' 'go'
+        'a8a7'A.eq bestmove ⍺ replies lines
+    }
+
+    test_go_replies_with_the_null_move_when_checkmated←{
+        lines←'position fen k7/1Q6/1K6/8/8/8/8/8 b - - 0 1' 'go'
+        '0000'A.eq bestmove ⍺ replies lines
+    }
+
+    test_ucinewgame_resets_to_the_start_position←{
+        lines←('position fen ',ONE_MOVE)'ucinewgame' 'go'
+        A.ok ⍺ isLegal H.START(bestmove ⍺ replies lines)
+    }
+
+    test_ucinewgame_has_no_reply←{
+        0 A.eq≢⍺ replies'ucinewgame'
+    }
+
+    test_ignores_extra_whitespace_between_tokens←{
+        lines←('  position   fen  ',ONE_MOVE,'  ')'  go  '
+        'a8a7'A.eq bestmove ⍺ replies lines
+    }
+
+    test_ignores_an_unknown_command←{
+        lines←('position fen ',ONE_MOVE)'xyzzy 42' 'go'
+        'a8a7'A.eq bestmove ⍺ replies lines
+    }
+
+    test_unknown_command_has_no_reply←{
+        0 A.eq≢⍺ replies'xyzzy 42'
+    }
+
+    test_ignores_an_empty_line←{
+        0 A.eq≢⍺ replies''
+    }
+
+    test_new_state_is_not_finished←{
+        0 A.eq #.UCI.finished #.UCI.newState ⍺
+    }
+
+    test_quit_finishes_the_session←{
+        1 A.eq #.UCI.finished⊃⍺ session'quit'
+    }
+
+    test_other_commands_do_not_finish_the_session←{
+        0 A.eq #.UCI.finished⊃⍺ session'isready'
     }
 
 :EndNamespace
