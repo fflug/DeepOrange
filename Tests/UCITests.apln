@@ -72,21 +72,27 @@
 
     ⍝ parsePosition
 
-    ⍝ Each case: position command line, FEN of the expected position.
-    test_parses_a_position_command_cases←(
-        ('start position'('position startpos' H.START))
-        ('start position with moves'('position startpos moves e2e4 e7e5 g1f3' 'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2'))
-        ('start position with a single move'('position startpos moves e2e4' 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
-        ('start position with an empty move list'('position startpos moves' H.START))
-        ('fen'('position fen r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 3 17' 'r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 3 17'))
-        ('fen with moves'('position fen r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1 moves e1g1 e8c8' '2kr3r/8/8/8/8/8/8/R4RK1 w - - 2 2'))
-        ('fen with a black promotion'('position fen k7/8/8/8/8/8/3p4/K7 b - - 0 1 moves d2d1q' 'k7/8/8/8/8/8/8/K2q4 w - - 0 2'))
-        ('fen without move counters'('position fen k7/8/8/8/8/8/8/K7 w - - moves a1a2' 'k7/8/8/8/8/8/K7/8 b - - 1 1'))
-        ('extra whitespace between tokens'('position  startpos   moves  e2e4 ' 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
+    words←{
+        ⍝ Space-separated text to its words, as the command dispatcher
+        ⍝ passes them.
+        ' '(≠⊆⊢)⍵
+    }
+
+    ⍝ Each case: arguments of the position command, FEN of the expected
+    ⍝ position.
+    test_parses_position_arguments_cases←(
+        ('start position'('startpos' H.START))
+        ('start position with moves'('startpos moves e2e4 e7e5 g1f3' 'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2'))
+        ('start position with a single move'('startpos moves e2e4' 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
+        ('start position with an empty move list'('startpos moves' H.START))
+        ('fen'('fen r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 3 17' 'r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 3 17'))
+        ('fen with moves'('fen r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1 moves e1g1 e8c8' '2kr3r/8/8/8/8/8/8/R4RK1 w - - 2 2'))
+        ('fen with a black promotion'('fen k7/8/8/8/8/8/3p4/K7 b - - 0 1 moves d2d1q' 'k7/8/8/8/8/8/8/K2q4 w - - 0 2'))
+        ('fen without move counters'('fen k7/8/8/8/8/8/8/K7 w - - moves a1a2' 'k7/8/8/8/8/8/K7/8 b - - 1 1'))
     )
-    test_parses_a_position_command←{
-        (line expected)←⍵
-        (#.Board.initFromFEN expected)A.eq #.UCI.parsePosition line
+    test_parses_position_arguments←{
+        (args expected)←⍵
+        (#.Board.initFromFEN expected)A.eq #.UCI.parsePosition words args
     }
 
 :EndNamespace
