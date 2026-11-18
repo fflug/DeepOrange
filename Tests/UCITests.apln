@@ -72,7 +72,7 @@
         (#.Board.initFromFEN expected)A.eq(#.Board.initFromFEN start)#.UCI.applyMoves moves
     }
 
-    ⍝ parsePosition
+    ⍝ handlePositionCmd
 
     words←{
         ⍝ Space-separated text to its words, as the command dispatcher
@@ -82,7 +82,7 @@
 
     ⍝ Each case: arguments of the position command, FEN of the expected
     ⍝ position.
-    test_parses_position_arguments_cases←(
+    test_handles_position_arguments_cases←(
         ('start position'('startpos' H.START))
         ('start position with moves'('startpos moves e2e4 e7e5 g1f3' 'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2'))
         ('start position with a single move'('startpos moves e2e4' 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
@@ -92,9 +92,9 @@
         ('fen with a black promotion'('fen k7/8/8/8/8/8/3p4/K7 b - - 0 1 moves d2d1q' 'k7/8/8/8/8/8/8/K2q4 w - - 0 2'))
         ('fen without move counters'('fen k7/8/8/8/8/8/8/K7 w - - moves a1a2' 'k7/8/8/8/8/8/K7/8 b - - 1 1'))
     )
-    test_parses_position_arguments←{
+    test_handles_position_arguments←{
         (args expected)←⍵
-        (#.Board.initFromFEN expected)A.eq #.UCI.parsePosition words args
+        (#.Board.initFromFEN expected)A.eq #.UCI.handlePositionCmd words args
     }
 
     ⍝ handle

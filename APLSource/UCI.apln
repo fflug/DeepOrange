@@ -1,5 +1,30 @@
 :Namespace UCI
 
+    MOVES←'moves'
+    FEN←'fen'
+    STARTPOS←'startpos'
+
+    handlePositionCmd←{
+        ⍝ Position described by the arguments of a UCI position command.
+        ⍝ ⍵ ←→ words following 'position':
+        ⍝      'startpos' ['moves' m1 m2 ...] or
+        ⍝      'fen' <fen fields> ['moves' m1 m2 ...]
+        ⍝ ← ←→ bitboards, game state after the moves
+
+        mask_moves←∨\⍵∊⊂MOVES
+        position←mask_moves~⍛/⍵
+        moves←mask_moves/⍵
+
+        bitboards game_state←initPosition position
+        bitboards game_state applyMoves 1↓moves
+    }
+
+    initPosition←{
+        position_type←⊃⍵
+        position_type≡STARTPOS:bitboards game_state←##.Board.initBoard ⍬
+        position_type≡FEN:bitboards game_state←##.Board.initFromFEN 1↓⍵
+    }
+
     applyMoves←{
         ⍝ ⍺ ←→ bitboards, game state
         ⍝ ⍵ ←→ a UCI move string, or a vector of them in order played

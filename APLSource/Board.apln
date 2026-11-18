@@ -15,13 +15,14 @@
 
     initFromFEN ←{
         ⍝ Initialise a position from a FEN string. The input is not validated.
-        ⍝ ⍵ ←→ FEN string
+        ⍝ ⍵ ←→ FEN string or vector of FEN fields
         ⍝ ← ←→ two-element vector consisting of:
         ⍝      bitboards: Boolean matrix, one row per piece.
         ⍝      game state: vector encoding the current game state.
 
-        ⍝ Split the FEN into its fields and set defaults for halfmove and fullmove.
-        f←' '(≠⊆⊢)⍵
+        ⍝ Split the FEN string into its fields.
+        f←' '(≠⊆⊢)⍣(1=≡⍵)⊢⍵
+        ⍝ Set defaults for halfmove and fullmove.
         f,←((≢f)-4)↓(,'0')(,'1')
         (pieces side castling en_passant halfmove fullmove)←f
 
