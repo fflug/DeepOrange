@@ -1,0 +1,33 @@
+⍝ UCI engine: reads commands from stdin and writes replies to stdout.
+⍝
+⍝ Usage: dyalogscript uci.apls
+
+⎕IO ⎕ML←1
+
+findFiles←{{⍵[⍋⍵]}⊆⊃0(⎕NINFO⍠1)⍵}
+
+SOURCE_TYPES←'.apln' '.aplc' '.apli' '.aplf' '.aplo'
+isSourceFile←{(⊂3⊃1 ⎕NPARTS ⍵)∊SOURCE_TYPES}
+
+args←2 ⎕NQ'.' 'GetCommandLineArgs'
+root←⊃1 ⎕NPARTS⊃args
+paths←findFiles root,'APLSource/*'
+_←{2 ⎕FIX'file://',⍵}¨(isSourceFile¨paths)/paths
+
+⍝ Under dyalogscript, ⍞← writes to stderr and ⎕← ends lines with a
+⍝ carriage return. UCI GUIs read newline-terminated lines from stdout,
+⍝ so replies are written to the stdout file descriptor directly.
+stdout←'/dev/stdout'⎕NTIE 0
+⍝ Each reply line is terminated by a newline; no replies writes nothing.
+writeLines←{('UTF-8'⎕UCS∊⍵,¨⎕UCS 10)⎕NAPPEND stdout 83}
+
+⍝ End of input means the GUI has gone away, which is treated as quit.
+readLine←{1005::UCI.CMD_QUIT ⋄ ⍞}
+
+state←UCI.newState LookupTables.createLookupTables ⍬
+:Repeat
+    (state replies)←state UCI.handle readLine ⍬
+    _←writeLines replies
+:Until UCI.finished state
+
+⎕OFF
