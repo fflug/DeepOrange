@@ -1,8 +1,64 @@
 :Namespace UCI
 
-    MOVES←'moves'
-    FEN←'fen'
-    STARTPOS←'startpos'
+    ⍝ Keywords in the arguments of the position command.
+    POS_MOVES←'moves'
+    POS_FEN←'fen'
+    POS_STARTPOS←'startpos'
+
+    ⍝ Commands from the GUI.
+    CMD_UCI←'uci'
+    CMD_ISREADY←'isready'
+    CMD_UCINEWGAME←'ucinewgame'
+    CMD_POSITION←'position'
+    CMD_GO←'go'
+    CMD_QUIT←'quit'
+
+    ID_LINES←'id name RandomAPL' 'id author Finn Flug' 'uciok'
+    NO_REPLY←0⍴⊂''
+
+    newState←{
+        ⍝ Engine state at the start of a session.
+        ⍝ ⍵ ←→ lookup tables
+        ⍝ ← ←→ lookup tables, position (bitboards, game state), finished flag
+        ⍵(##.Board.initBoard ⍬)0
+    }
+
+    finished←{
+        ⍝ ⍵ ←→ engine state
+        ⍝ ← ←→ 1 once quit has been received
+        3⊃⍵
+    }
+
+    handle←{
+        ⍝ Respond to one line of UCI input.
+        ⍝ ⍺ ←→ engine state
+        ⍝ ⍵ ←→ input line
+        ⍝ ← ←→ engine state, vector of reply lines
+
+        (lookups position done)←⍺
+        words←' '(≠⊆⊢)⍵
+
+        ⍝ UCI requires unknown commands and empty lines to be ignored.
+        0=≢words:⍺ NO_REPLY
+        (command args)←(⊃words)(1↓words)
+        command≡CMD_UCI:⍺ ID_LINES
+        command≡CMD_ISREADY:⍺(,⊂'readyok')
+        command≡CMD_UCINEWGAME:(newState lookups)NO_REPLY
+        command≡CMD_POSITION:(lookups(handlePositionCmd args)done)NO_REPLY
+        command≡CMD_GO:⍺(,⊂handleGoCmd lookups position)
+        command≡CMD_QUIT:(lookups position 1)NO_REPLY
+        ⍺ NO_REPLY
+    }
+
+    handleGoCmd←{
+        ⍝ Search parameters are ignored; the move is chosen at random.
+        ⍝ ⍵ ←→ lookup tables, position
+        ⍝ ← ←→ bestmove reply; the null move 0000 when there is no legal move
+        (lookups position)←⍵
+        move←lookups ##.Search.randomMove position
+        0=≢move:'bestmove 0000'
+        'bestmove ',moveToUCI move
+    }
 
     handlePositionCmd←{
         ⍝ Position described by the arguments of a UCI position command.
@@ -11,7 +67,7 @@
         ⍝      'fen' <fen fields> ['moves' m1 m2 ...]
         ⍝ ← ←→ bitboards, game state after the moves
 
-        mask_moves←∨\⍵∊⊂MOVES
+        mask_moves←∨\⍵∊⊂POS_MOVES
         position←mask_moves~⍛/⍵
         moves←mask_moves/⍵
 
@@ -21,8 +77,8 @@
 
     initPosition←{
         position_type←⊃⍵
-        position_type≡STARTPOS:bitboards game_state←##.Board.initBoard ⍬
-        position_type≡FEN:bitboards game_state←##.Board.initFromFEN 1↓⍵
+        position_type≡POS_STARTPOS:bitboards game_state←##.Board.initBoard ⍬
+        position_type≡POS_FEN:bitboards game_state←##.Board.initFromFEN 1↓⍵
     }
 
     applyMoves←{
