@@ -1,4 +1,7 @@
 :Namespace UCI
+    ⍝ Communication with chess GUIs over the UCI protocol.
+
+    ⎕IO ⎕ML←1
 
     ⍝ Keywords in the arguments of the position command.
     POS_MOVES←'moves'
@@ -13,7 +16,14 @@
     CMD_GO←'go'
     CMD_QUIT←'quit'
 
-    ID_LINES←'id name RandomAPL' 'id author Finn Flug' 'uciok'
+    ⍝ Replies to the GUI.
+    REPLY_UCIOK←'uciok'
+    REPLY_READYOK←'readyok'
+    REPLY_BESTMOVE←'bestmove'
+    ⍝ Move reported when the side to move has no legal move.
+    NULL_MOVE←'0000'
+
+    ID_LINES←'id name RandomAPL' 'id author Finn Flug'REPLY_UCIOK
     NO_REPLY←0⍴⊂''
 
     newState←{
@@ -42,7 +52,7 @@
         0=≢words:⍺ NO_REPLY
         (command args)←(⊃words)(1↓words)
         command≡CMD_UCI:⍺ ID_LINES
-        command≡CMD_ISREADY:⍺(,⊂'readyok')
+        command≡CMD_ISREADY:⍺(,⊂REPLY_READYOK)
         command≡CMD_UCINEWGAME:(newState lookups)NO_REPLY
         command≡CMD_POSITION:(lookups(handlePositionCmd args)done)NO_REPLY
         command≡CMD_GO:⍺(,⊂handleGoCmd lookups position)
@@ -53,11 +63,11 @@
     handleGoCmd←{
         ⍝ Search parameters are ignored; the move is chosen at random.
         ⍝ ⍵ ←→ lookup tables, position
-        ⍝ ← ←→ bestmove reply; the null move 0000 when there is no legal move
+        ⍝ ← ←→ bestmove reply; the null move when there is no legal move
         (lookups position)←⍵
         move←lookups ##.Search.randomMove position
-        0=≢move:'bestmove 0000'
-        'bestmove ',moveToUCI move
+        0=≢move:REPLY_BESTMOVE,' ',NULL_MOVE
+        REPLY_BESTMOVE,' ',moveToUCI move
     }
 
     handlePositionCmd←{
@@ -67,21 +77,24 @@
         ⍝      'fen' <fen fields> ['moves' m1 m2 ...]
         ⍝ ← ←→ bitboards, game state after the moves
 
-        mask_moves←∨\⍵∊⊂POS_MOVES
-        position←mask_moves~⍛/⍵
-        moves←mask_moves/⍵
-
-        bitboards game_state←initPosition position
-        bitboards game_state applyMoves 1↓moves
+        after_moves←∨\⍵∊⊂POS_MOVES
+        position←after_moves~⍛/⍵
+        moves←1↓after_moves/⍵
+        (initPosition position)applyMoves moves
     }
 
     initPosition←{
+        ⍝ Position before the moves of a position command.
+        ⍝ ⍵ ←→ 'startpos', or 'fen' followed by the FEN fields
+        ⍝ ← ←→ bitboards, game state
+
         position_type←⊃⍵
-        position_type≡POS_STARTPOS:bitboards game_state←##.Board.initBoard ⍬
-        position_type≡POS_FEN:bitboards game_state←##.Board.initFromFEN 1↓⍵
+        position_type≡POS_STARTPOS:##.Board.initBoard ⍬
+        position_type≡POS_FEN:##.Board.initFromFEN 1↓⍵
     }
 
     applyMoves←{
+        ⍝ Apply UCI moves to a position.
         ⍝ ⍺ ←→ bitboards, game state
         ⍝ ⍵ ←→ a UCI move string, or a vector of them in order played
         ⍝ ← ←→ bitboards, game state after the moves
@@ -92,6 +105,7 @@
     }
 
     applyMove←{
+        ⍝ Apply a UCI move to a position.
         ⍝ ⍺ ←→ bitboards, game state
         ⍝ ⍵ ←→ UCI move string
         ⍝ ← ←→ bitboards, game state after the move
@@ -108,39 +122,40 @@
     }
 
     indexToSquare←{
-        ⍝ board index to algebraic square name
+        ⍝ Board index to algebraic square name; inverse of squareToIndex.
         ⍝ ⍵ ←→ board index
-        ⍝ ← ←→ algebraic square name
+        ⍝ ← ←→ square name, e.g. 'e4'
 
-        ⍝ Indices are one-indexed, so 8|⍵ is 0 for the h-file.
+        ⍝ Indices start at 1, so 8|⍵ is 0 for the h-file. The file
+        ⍝ letters are rotated so h comes first.
         file←'habcdefg'[1+8|⍵]
         rank←⍕⌈⍵÷8
         file,rank
     }
 
     uciToMove←{
-        ⍝ UCI move format to internal move format
-        ⍝ ⍺ ←→ side to play
-        ⍝ ⍵ ←→ UCI format
-        ⍝ ← ←→ internal format
+        ⍝ UCI move string to move.
+        ⍝ ⍺ ←→ side to move (0 white, 1 black); UCI promotion letters
+        ⍝      are lowercase for both sides, so the colour comes from ⍺
+        ⍝ ⍵ ←→ UCI move string, e.g. 'e2e4', 'e7e8q'
+        ⍝ ← ←→ move (from to promotion)
 
         from←squareToIndex 2↑⍵
-        to←squareToIndex 2↓4↑⍵
+        to←squareToIndex 2↑2↓⍵
         4=≢⍵:from to 0
         promotion←('pnbrqk'⍳⊃⌽⍵)⊃##.Pieces.(P N B R Q K)+6×⍺
         from to promotion
     }
 
-
     moveToUCI←{
-        ⍝ Internal move format to UCI move fomat
-        ⍝ ⍵ ←→ internal format
-        ⍝ ← ←→ uci format
+        ⍝ Move to UCI move string.
+        ⍝ ⍵ ←→ move (from to promotion)
+        ⍝ ← ←→ UCI move string, e.g. 'e2e4', 'e7e8q'
 
         uci←∊indexToSquare¨2↑⍵
         promotion←⊃⌽⍵
         promotion=0:uci
-        uci,←'pnbrqkpnbrqk'[##.Pieces.(P N B R Q K p n b r q k)⍳⊃⌽⍵]
+        uci,←'pnbrqkpnbrqk'[##.Pieces.(P N B R Q K p n b r q k)⍳promotion]
         uci
     }
 

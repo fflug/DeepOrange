@@ -1,8 +1,5 @@
 :Namespace UCITests
     ⎕IO ⎕ML←1
-    A←#.Assert
-    H←#.Helpers
-    P←#.Pieces
 
     setup←{#.LookupTables.createLookupTables ⍬}
 
@@ -16,7 +13,7 @@
         ⍝ ⍵ ←→ 'from to', promotion (0 for none)
         ⍝ ← ←→ move (from to promotion)
         (squares promotion)←⍵
-        (H.sqs squares),promotion
+        (#.Helpers.sqs squares),promotion
     }
 
     ⍝ Each case: side to move (0 white, 1 black), move, UCI string.
@@ -29,36 +26,36 @@
         ('white queenside castling'(0(move'e1 c1' 0)'e1c1'))
         ('black kingside castling'(1(move'e8 g8' 0)'e8g8'))
         ('black queenside castling'(1(move'e8 c8' 0)'e8c8'))
-        ('white promotion to queen'(0(move'e7 e8'P.Q)'e7e8q'))
-        ('white promotion to rook'(0(move'e7 e8'P.R)'e7e8r'))
-        ('white promotion to bishop'(0(move'e7 e8'P.B)'e7e8b'))
-        ('white promotion to knight'(0(move'e7 e8'P.N)'e7e8n'))
-        ('black promotion to queen'(1(move'd2 d1'P.q)'d2d1q'))
-        ('black promotion to knight'(1(move'd2 d1'P.n)'d2d1n'))
-        ('promotion with capture'(0(move'g7 h8'P.Q)'g7h8q'))
+        ('white promotion to queen'(0(move'e7 e8'#.Pieces.Q)'e7e8q'))
+        ('white promotion to rook'(0(move'e7 e8'#.Pieces.R)'e7e8r'))
+        ('white promotion to bishop'(0(move'e7 e8'#.Pieces.B)'e7e8b'))
+        ('white promotion to knight'(0(move'e7 e8'#.Pieces.N)'e7e8n'))
+        ('black promotion to queen'(1(move'd2 d1'#.Pieces.q)'d2d1q'))
+        ('black promotion to knight'(1(move'd2 d1'#.Pieces.n)'d2d1n'))
+        ('promotion with capture'(0(move'g7 h8'#.Pieces.Q)'g7h8q'))
         ('corner squares'(0(move'a1 h8' 0)'a1h8'))
     )
 
     test_writes_a_move_in_uci_notation_cases←CASES
     test_writes_a_move_in_uci_notation←{
         (side mv uci)←⍵
-        uci A.eq #.UCI.moveToUCI mv
+        uci #.Assert.eq #.UCI.moveToUCI mv
     }
 
     test_reads_a_move_from_uci_notation_cases←CASES
     test_reads_a_move_from_uci_notation←{
         (side mv uci)←⍵
-        mv A.eq side #.UCI.uciToMove uci
+        mv #.Assert.eq side #.UCI.uciToMove uci
     }
 
     ⍝ applyMoves
 
     ⍝ Each case: start FEN, moves, FEN of the expected position.
     test_applies_moves_to_a_position_cases←(
-        ('no moves'(H.START(0⍴⊂'')H.START))
-        ('single move as a plain string'(H.START'e2e4' 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
-        ('single move as a one-item vector'(H.START(,⊂'e2e4')'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
-        ('moves in the order played'(H.START('e2e4' 'e7e5' 'g1f3')'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2'))
+        ('no moves'(#.Helpers.START(0⍴⊂'')#.Helpers.START))
+        ('single move as a plain string'(#.Helpers.START'e2e4' 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
+        ('single move as a one-item vector'(#.Helpers.START(,⊂'e2e4')'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
+        ('moves in the order played'(#.Helpers.START('e2e4' 'e7e5' 'g1f3')'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2'))
         ('capture'('rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2' 'e4d5' 'rnbqkbnr/ppp1pppp/8/3P4/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2'))
         ('en passant capture'('k7/8/8/3pP3/8/8/8/K7 w - d6 0 1' 'e5d6' 'k7/8/3P4/8/8/8/8/K7 b - - 0 1'))
         ('white kingside castling'('r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1' 'e1g1' 'r3k2r/8/8/8/8/8/8/R4RK1 b kq - 1 1'))
@@ -69,7 +66,7 @@
     )
     test_applies_moves_to_a_position←{
         (start moves expected)←⍵
-        (#.Board.initFromFEN expected)A.eq(#.Board.initFromFEN start)#.UCI.applyMoves moves
+        (#.Board.initFromFEN expected)#.Assert.eq(#.Board.initFromFEN start)#.UCI.applyMoves moves
     }
 
     ⍝ handlePositionCmd
@@ -83,10 +80,10 @@
     ⍝ Each case: arguments of the position command, FEN of the expected
     ⍝ position.
     test_handles_position_arguments_cases←(
-        ('start position'('startpos' H.START))
+        ('start position'('startpos' #.Helpers.START))
         ('start position with moves'('startpos moves e2e4 e7e5 g1f3' 'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2'))
         ('start position with a single move'('startpos moves e2e4' 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
-        ('start position with an empty move list'('startpos moves' H.START))
+        ('start position with an empty move list'('startpos moves' #.Helpers.START))
         ('fen'('fen r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 3 17' 'r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 3 17'))
         ('fen with moves'('fen r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1 moves e1g1 e8c8' '2kr3r/8/8/8/8/8/8/R4RK1 w - - 2 2'))
         ('fen with a black promotion'('fen k7/8/8/8/8/8/3p4/K7 b - - 0 1 moves d2d1q' 'k7/8/8/8/8/8/8/K2q4 w - - 0 2'))
@@ -94,7 +91,7 @@
     )
     test_handles_position_arguments←{
         (args expected)←⍵
-        (#.Board.initFromFEN expected)A.eq #.UCI.handlePositionCmd words args
+        (#.Board.initFromFEN expected)#.Assert.eq #.UCI.handlePositionCmd words args
     }
 
     ⍝ handle
@@ -126,9 +123,9 @@
     bestmove←{
         ⍝ ⍵ ←→ replies to go
         ⍝ ← ←→ move named by the single bestmove reply
-        1≠≢⍵:A.fail'expected one reply but got ',⍕≢⍵
+        1≠≢⍵:#.Assert.fail'expected one reply but got ',⍕≢⍵
         reply←⊃⍵
-        ~'bestmove '≡9↑reply:A.fail'expected bestmove but got ',reply
+        ~'bestmove '≡9↑reply:#.Assert.fail'expected bestmove but got ',reply
         9↓reply
     }
 
@@ -145,85 +142,85 @@
     ONE_MOVE←'k7/8/8/8/8/8/8/1R5K b - - 0 1'
 
     test_uci_identifies_the_engine_by_name←{
-        A.ok'id name '≡8↑⊃⍺ replies'uci'
+        #.Assert.ok'id name '≡8↑⊃⍺ replies'uci'
     }
 
     test_uci_identifies_the_author←{
-        A.ok'id author '≡10↑2⊃⍺ replies'uci'
+        #.Assert.ok'id author '≡10↑2⊃⍺ replies'uci'
     }
 
     test_uci_ends_with_uciok←{
-        'uciok'A.eq⊃⌽⍺ replies'uci'
+        'uciok'#.Assert.eq⊃⌽⍺ replies'uci'
     }
 
     test_isready_replies_readyok←{
-        (,⊂'readyok')A.eq ⍺ replies'isready'
+        (,⊂'readyok')#.Assert.eq ⍺ replies'isready'
     }
 
     test_go_replies_with_a_legal_move_from_the_start_position←{
-        A.ok ⍺ isLegal H.START(bestmove ⍺ replies'go')
+        #.Assert.ok ⍺ isLegal #.Helpers.START(bestmove ⍺ replies'go')
     }
 
     test_go_ignores_search_parameters←{
-        A.ok ⍺ isLegal H.START(bestmove ⍺ replies'go wtime 60000 btime 60000 winc 0 binc 0')
+        #.Assert.ok ⍺ isLegal #.Helpers.START(bestmove ⍺ replies'go wtime 60000 btime 60000 winc 0 binc 0')
     }
 
     test_position_has_no_reply←{
-        0 A.eq≢⍺ replies'position startpos moves e2e4'
+        0 #.Assert.eq≢⍺ replies'position startpos moves e2e4'
     }
 
     test_go_plays_from_a_position_given_by_fen←{
-        'a8a7'A.eq bestmove ⍺ replies('position fen ',ONE_MOVE)'go'
+        'a8a7'#.Assert.eq bestmove ⍺ replies('position fen ',ONE_MOVE)'go'
     }
 
     test_go_plays_from_a_position_after_its_moves←{
         ⍝ After b2b1 the black king on a8 has only a7.
         lines←'position fen k7/8/8/8/8/8/1R6/7K w - - 0 1 moves b2b1' 'go'
-        'a8a7'A.eq bestmove ⍺ replies lines
+        'a8a7'#.Assert.eq bestmove ⍺ replies lines
     }
 
     test_go_replies_with_the_null_move_when_checkmated←{
         lines←'position fen k7/1Q6/1K6/8/8/8/8/8 b - - 0 1' 'go'
-        '0000'A.eq bestmove ⍺ replies lines
+        '0000'#.Assert.eq bestmove ⍺ replies lines
     }
 
     test_ucinewgame_resets_to_the_start_position←{
         lines←('position fen ',ONE_MOVE)'ucinewgame' 'go'
-        A.ok ⍺ isLegal H.START(bestmove ⍺ replies lines)
+        #.Assert.ok ⍺ isLegal #.Helpers.START(bestmove ⍺ replies lines)
     }
 
     test_ucinewgame_has_no_reply←{
-        0 A.eq≢⍺ replies'ucinewgame'
+        0 #.Assert.eq≢⍺ replies'ucinewgame'
     }
 
     test_ignores_extra_whitespace_between_tokens←{
         lines←('  position   fen  ',ONE_MOVE,'  ')'  go  '
-        'a8a7'A.eq bestmove ⍺ replies lines
+        'a8a7'#.Assert.eq bestmove ⍺ replies lines
     }
 
     test_ignores_an_unknown_command←{
         lines←('position fen ',ONE_MOVE)'xyzzy 42' 'go'
-        'a8a7'A.eq bestmove ⍺ replies lines
+        'a8a7'#.Assert.eq bestmove ⍺ replies lines
     }
 
     test_unknown_command_has_no_reply←{
-        0 A.eq≢⍺ replies'xyzzy 42'
+        0 #.Assert.eq≢⍺ replies'xyzzy 42'
     }
 
     test_ignores_an_empty_line←{
-        0 A.eq≢⍺ replies''
+        0 #.Assert.eq≢⍺ replies''
     }
 
     test_new_state_is_not_finished←{
-        0 A.eq #.UCI.finished #.UCI.newState ⍺
+        0 #.Assert.eq #.UCI.finished #.UCI.newState ⍺
     }
 
     test_quit_finishes_the_session←{
-        1 A.eq #.UCI.finished⊃⍺ session'quit'
+        1 #.Assert.eq #.UCI.finished⊃⍺ session'quit'
     }
 
     test_other_commands_do_not_finish_the_session←{
-        0 A.eq #.UCI.finished⊃⍺ session'isready'
+        0 #.Assert.eq #.UCI.finished⊃⍺ session'isready'
     }
 
 :EndNamespace

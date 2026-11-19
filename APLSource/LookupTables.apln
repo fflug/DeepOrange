@@ -5,16 +5,16 @@
 
     ⍝ Ray directions as (rank file) steps. The position of a direction in
     ⍝ this vector is its index into the first axis of the rays table.
-    directions←(1 0)(¯1 0)(0 1)(0 ¯1)(1 1)(1 ¯1)(¯1 1)(¯1 ¯1)
-    orthogonal←⍸0∊¨directions
-    diagonal←⍸~0∊¨directions
+    DIRECTIONS←(1 0)(¯1 0)(0 1)(0 ¯1)(1 1)(1 ¯1)(¯1 1)(¯1 ¯1)
+    ORTHOGONAL←⍸0∊¨DIRECTIONS
+    DIAGONAL←⍸~0∊¨DIRECTIONS
 
     createLookupTables←{
-        ⍝ Creates the lookup tables
+        ⍝ Lookup tables used by move generation.
         ⍝ ⍵ ←→ empty
         ⍝ ← ←→ namespace of lookup tables
 
-        ⍝ Representing squares as (rank file) coordinates.
+        ⍝ Squares as (rank file) coordinates, in board index order.
         coordinates←,⍳8 8
         ⍝ steps[i;j] is the (rank file) step from square i to square j.
         steps←∘.(-⍨)⍨coordinates
@@ -27,42 +27,54 @@
     }
 
     createKnightLookup←{
-        ⍝ Create lookup table for the knight
-        ⍝ ⍵ ←→ 64×64 matrix of move offsets
-        ⍝ ← ←→ 64×64 boolean matrix, [from;to] is 1 if a knight attacks to
+        ⍝ Knight attacks.
+        ⍝ ⍵ ←→ 64×64 matrix of (rank file) steps
+        ⍝ ← ←→ 64×64 Boolean matrix; [from;to] is 1 if a knight on from
+        ⍝      attacks to
 
         ⍵∊(1 2)(2 1)(¯1 2)(¯2 1)(1 ¯2)(2 ¯1)(¯1 ¯2)(¯2 ¯1)
     }
 
     createKingLookup←{
-        ⍝ Create lookup table for the king
-        ⍝ ⍵ ←→ 64×64 matrix of move offsets
-        ⍝ ← ←→ 64×64 boolean matrix, [from;to] is 1 if a king attacks to
+        ⍝ King attacks.
+        ⍝ ⍵ ←→ 64×64 matrix of (rank file) steps
+        ⍝ ← ←→ 64×64 Boolean matrix; [from;to] is 1 if a king on from
+        ⍝      attacks to
 
         ⍵∊(,∘.,⍨¯1 0 1)~⊂0 0
     }
 
     createPawnLookup←{
-        ⍝ Create pawn capture lookup table
-        ⍝ ⍵ ←→ 64×64 matrix of move offsets
-        ⍝ ← ←→ 2×64×64 boolean array, [side;from;to] with side 1 white, 2 black
+        ⍝ Pawn capture attacks.
+        ⍝ ⍵ ←→ 64×64 matrix of (rank file) steps
+        ⍝ ← ←→ 2×64×64 Boolean array; [side;from;to] is 1 if a pawn on
+        ⍝      from attacks to, with side 1 for white and 2 for black
 
         ↑(⍵∊(1 ¯1)(1 1))(⍵∊(¯1 ¯1)(¯1 1))
     }
 
     createRays←{
-        ⍝ Create sliding piece rays
-        ⍝ ⍵ ←→ length 64 vector of (rank file) coordinates
+        ⍝ Rays for sliding pieces.
+        ⍝ ⍵ ←→ 64-item vector of (rank file) coordinates
         ⍝ ← ←→ 8×64 nested matrix, [direction;from] is the vector of squares
         ⍝      along that direction, nearest first, up to the board edge
+
+        DIRECTIONS∘.ray ⍵
+    }
+
+    ray←{
+        ⍝ Squares along one ray.
+        ⍝ ⍺ ←→ direction as a (rank file) step
+        ⍝ ⍵ ←→ (rank file) coordinates of the starting square
+        ⍝ ← ←→ vector of squares in that direction, nearest first, up to
+        ⍝      the board edge; the starting square is excluded
+
+        ⍝ Create all coordinates along the ray.
+        coordinates←⍵+⍤1⊢(⍳7)∘.×⍺
+        coordinates←coordinates⌿⍨∧/(coordinates≥1)∧coordinates≤8
         
-        coordinates←⍵
-        radiateSingleDirection←{
-            c←(⍵⊃coordinates)+⍤1⊢(⍳7)∘.×⍺
-            c←c⌿⍨∧/(c≥1)∧c≤8
-            1+8⊥⍉c-1
-        }
-        directions∘.radiateSingleDirection⍳64
+        ⍝ Convert coordinates to squares.
+        1+8⊥⍉coordinates-1
     }
 
 :EndNamespace

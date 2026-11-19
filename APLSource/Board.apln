@@ -1,5 +1,5 @@
 :Namespace Board
-    ⍝ Representation of the board and the game state.
+    ⍝ Initialisation of the board and the game state.
 
     ⎕IO ⎕ML←1
 

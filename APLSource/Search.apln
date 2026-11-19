@@ -1,10 +1,13 @@
 :Namespace Search
+    ⍝ Choice of the move to play.
+
     ⎕IO ⎕ML←1
 
     randomMove←{
-        ⍝ ⍺ ←→ lookups
+        ⍝ Uniformly random legal move.
+        ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ bitboards, game state
-        ⍝ ← ←→ random legal move
+        ⍝ ← ←→ move (from to promotion); ⍬ when there is no legal move
         
         moves←⍺ ##.MoveGeneration.generateLegalMoves ⍵
         0=≢moves:⍬

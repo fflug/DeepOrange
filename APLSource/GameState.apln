@@ -1,22 +1,26 @@
 :Namespace GameState
+    ⍝ Representation of the game state as a compact numeric vector.
+    
     ⎕IO ⎕ML←1
     
-    ⍝ These are the indices used for the game state vector.
-    ⍝ The goal is to keep the representation slim so that move generation does not occupy as much memory.
-
+    ⍝ Indices into the game state vector. A flat vector keeps each
+    ⍝ position small.
     side←1
     castling_rights←1+⍳4
     en_passant_square←6
     halfmove←7
     fullmove←8
-    max_index←⌈/∊side castling_rights en_passant_square halfmove fullmove
 
     init←{
-        ⍝ Initialize a game state vector.
-        ⍝ ⍵ ←→
-        ⍝ ← ←→
+        ⍝ Game state vector from named fields.
+        ⍝ ⍵ ←→ namespace with side, castling_rights, en_passant_square,
+        ⍝      halfmove and fullmove
+        ⍝ ← ←→ game state vector
+
+        max_index←⌈/∊side castling_rights en_passant_square halfmove fullmove
         game_state←max_index⍴0
-        game_state[∊side castling_rights en_passant_square halfmove fullmove]←∊⍵ ⎕VGET 'side' 'castling_rights'  'en_passant_square' 'halfmove' 'fullmove'
+        names←'side' 'castling_rights'  'en_passant_square' 'halfmove' 'fullmove'
+        game_state[∊side castling_rights en_passant_square halfmove fullmove]←∊⍵ ⎕VGET names
         game_state
     }
 

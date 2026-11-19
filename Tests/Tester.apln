@@ -17,7 +17,7 @@
     ⍝ Names of test functions are test_*
     TEST_FN_PREFIX←'test_'
 
-    ⍝ Names of testcases are test function names followed by _cases
+    ⍝ Names of test case vectors are test function names followed by _cases
     CASES_POSTFIX←'_cases'
 
     STATUS_ERROR←'ERROR'
@@ -93,7 +93,7 @@
     ⍝ Reporting
 
     report←{
-        ⍝ Create a report from the result matrix
+        ⍝ Report text for a result matrix
         ⍝ ⍵ ←→ results matrix
         ⍝ ← ←→ report text
 

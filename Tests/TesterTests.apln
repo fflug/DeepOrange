@@ -1,7 +1,5 @@
 :Namespace TesterTests
     ⎕IO ⎕ML←1
-    T←#.Tester
-    A←#.Assert
 
     ⍝ Sample suites run by the runner tests below. They are nested
     ⍝ namespaces, so the outer runner does not discover them as tests.
@@ -31,53 +29,53 @@
     }
 
     test_reports_a_passing_test_as_pass←{
-        'PASS'A.eq ⍺ statusOf'passes'
+        'PASS'#.Assert.eq ⍺ statusOf'passes'
     }
 
     test_reports_a_failed_assertion_as_fail←{
-        'FAIL'A.eq ⍺ statusOf'fails'
+        'FAIL'#.Assert.eq ⍺ statusOf'fails'
     }
 
     test_reports_the_assertion_message←{
-        'expected 1 but got 2'A.eq(⍺[;2]⍳⊂'fails')⊃⍺[;4]
+        'expected 1 but got 2'#.Assert.eq(⍺[;2]⍳⊂'fails')⊃⍺[;4]
     }
 
     test_reports_any_other_error_as_error←{
-        'ERROR'A.eq ⍺ statusOf'crashes'
+        'ERROR'#.Assert.eq ⍺ statusOf'crashes'
     }
 
     test_passes_the_setup_result_to_each_test←{
-        'PASS'A.eq ⍺ statusOf'sees the fixture'
+        'PASS'#.Assert.eq ⍺ statusOf'sees the fixture'
     }
 
     test_reports_each_case_separately←{
-        'PASS' 'FAIL'A.eq ⍺∘statusOf¨'checks each case [good]' 'checks each case [bad]'
+        'PASS' 'FAIL'#.Assert.eq ⍺∘statusOf¨'checks each case [good]' 'checks each case [bad]'
     }
 
     test_only_runs_functions_named_as_tests←{
-        6 A.eq≢⍺
+        6 #.Assert.eq≢⍺
     }
 
     test_names_the_suite_in_each_result←{
-        A.ok∧/⍺[;1]∊⊂'Sample'
+        #.Assert.ok∧/⍺[;1]∊⊂'Sample'
     }
 
     test_reports_every_test_as_error_when_setup_fails←{
-        r←T.runSuite BrokenSetup
-        _←(,⊂'ERROR')A.eq r[;3]
-        A.ok'setup failed'≡12↑⊃r[;4]
+        r←#.Tester.runSuite BrokenSetup
+        _←(,⊂'ERROR')#.Assert.eq r[;3]
+        #.Assert.ok'setup failed'≡12↑⊃r[;4]
     }
 
     test_failed_is_one_when_any_test_fails_or_errors←{
-        A.ok T.failed ⍺
+        #.Assert.ok #.Tester.failed ⍺
     }
 
     test_failed_is_zero_when_all_tests_pass←{
-        0 A.eq T.failed ⍺⌿⍨⍺[;3]∊⊂'PASS'
+        0 #.Assert.eq #.Tester.failed ⍺⌿⍨⍺[;3]∊⊂'PASS'
     }
 
     test_display_name_drops_the_prefix_and_underscores←{
-        'places white pawns'A.eq T.getDisplayName'test_places_white_pawns' ''
+        'places white pawns'#.Assert.eq #.Tester.getDisplayName'test_places_white_pawns' ''
     }
 
 :EndNamespace

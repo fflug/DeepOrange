@@ -1,17 +1,16 @@
 :Namespace MoveGeneration
-    ⍝ Generation of pseudo-legal moves
+    ⍝ Move generation, legality checking and making moves.
 
-    ⎕IO ⎕ML←1                                       
- 
+    ⎕IO ⎕ML←1
+
     generatePseudoLegalMoves←{
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ bitboards, game state
         ⍝ ← ←→ matrix of (from to promotion); promotion is 0 for a
         ⍝      non-promoting move, otherwise the piece type promoted to
-        
+
         lookups←⍺
         (bitboards game_state)←⍵
-        P←##.Pieces
         side←game_state[##.GameState.side]
         offset←6×side
         own←∨⌿bitboards[offset+⍳6;]
@@ -19,14 +18,18 @@
         occupied←own∨enemy
 
         ⍝ One attack matrix for all non-pawn pieces: a row per piece,
-        ⍝ a column per square, in the same order as from. ⍸ lists pieces
-        ⍝ grouped by type, and key keeps that order.
-        types←P.(N B R Q K)
-        (type from)←↓⍉↑⍸bitboards[offset+types;]
-        attacks←⊃⍪/type{⊂lookups generatePieceAttacks types[⍺]⍵ occupied}⌸from
+        ⍝ a column per square, in the same order as from.
+        (knights bishops rooks queens kings)←⍸¨↓bitboards[offset+##.Pieces.(N B R Q K);]
+        from←knights,bishops,rooks,queens,kings
+        attacks←lookups.knight[knights;]
+        attacks⍪←lookups generateSlidingAttacks bishops ##.LookupTables.DIAGONAL occupied
+        attacks⍪←lookups generateSlidingAttacks rooks ##.LookupTables.ORTHOGONAL occupied
+        attacks⍪←lookups generateSlidingAttacks queens ##.LookupTables.(ORTHOGONAL,DIAGONAL)occupied
+        attacks⍪←lookups.king[kings;]
         piece_moves←from expand attacks∧⍤1⊢~own
 
-        pawn_moves←lookups generatePseudoLegalPawnMoves bitboards occupied enemy side offset (game_state[##.GameState.en_passant_square])
+        en_passant_square←game_state[##.GameState.en_passant_square]
+        pawn_moves←lookups generatePseudoLegalPawnMoves bitboards occupied enemy side offset en_passant_square
 
         rights←game_state[##.GameState.castling_rights][(2×side)+⍳2]
         castling_moves←lookups generateCastlingMoves bitboards occupied side rights
@@ -45,25 +48,25 @@
         rank←56×side
         king←rank+5
 
-        ⍝ List the relevant squares.
-        ⍝ Kingside then queenside, in the order of rights.
+        ⍝ Squares for kingside then queenside, in the order of rights.
         to←rank+7 3
         between←rank+(6 7)(2 3 4)
         crossed←rank+6 4
-        
+
         ⍝ No pieces between king and rook.
         clear←{~∨/occupied[⍵]}¨between
-        
-        ⍝ King is not in check and all squares which the king crosses are not attacked.
-        ⍝ As for all pseudo legal moves, the legality filter checks if castling leaves the king in check.
-        attacked←⍺ checkSquareAttacked bitboards(king,crossed)(1-side)
-        safe←(~⊃attacked)∧~1↓attacked
+
+        ⍝ The king may not castle out of check or across an attacked
+        ⍝ square. Whether it lands in check is left to the legality
+        ⍝ filter, as for every other pseudo-legal move.
+        attacked←⍺ checkSquareAttacked bitboards(king,crossed)(~side)
+        safe←~(⊃attacked)∨1↓attacked
         (king,⍪(rights∧clear∧safe)/to),0
     }
 
     expand←{
         ⍝ ⍺ ←→ from squares, one per row of ⍵
-        ⍝ ⍵ ←→ boolean matrix, (≢⍺)×64; 1 marks a reachable square
+        ⍝ ⍵ ←→ Boolean matrix, (≢⍺)×64; 1 marks a reachable square
         ⍝ ← ←→ matrix of (from to), one row per 1 in ⍵
         hits←↑⍸⍵
         ⍺[hits[;1]],⍪hits[;2]
@@ -76,55 +79,33 @@
         ⍝ ← ←→ matrix of (from to promotion), as for generatePseudoLegalMoves
 
         (bitboards occupied enemy side offset en_passant_square)←⍵
-        
-        P←##.Pieces
+        squares←⍸bitboards[offset+##.Pieces.P;]
+        step←8-16×side
+        home_rank←2+5×side
 
+        single←occupied[squares+step]~⍛/squares
+        double←single/⍨home_rank=⌈single÷8
+        double←occupied[double+2×step]~⍛/double
 
-        pawn_squares←⍸bitboards[offset+P.P;]
-        pawn_direction←8-16×side
-        pawn_home_rank←2+5×side
-        ⍝ en_passant is all zeros when there is no en passant square.
-        en_passant←en_passant_square=⍳64
+        ⍝ The en passant square is 0 when there is none, so it marks no square.
+        targets←enemy∨en_passant_square=⍳64
+        captures←⍺.pawn[1+side;squares;]∧⍤1⊢targets
 
-        single_push_from←pawn_squares/⍨~occupied[pawn_squares+pawn_direction]
-        double_push_from←single_push_from/⍨pawn_home_rank=⌈single_push_from÷8
-        double_push_from←double_push_from/⍨~occupied[double_push_from+2×pawn_direction]
-        captures←⍺.pawn[1+side;pawn_squares;]∧⍤1⊢enemy∨en_passant
-
-        pawn_moves←single_push_from,⍪single_push_from+pawn_direction
-        pawn_moves⍪←double_push_from,⍪double_push_from+2×pawn_direction
-        pawn_moves⍪←pawn_squares expand captures
+        moves←(single,⍪single+step)⍪(double,⍪double+2×step)⍪squares expand captures
 
         ⍝ A pawn reaching rank 1 or 8 yields one move per promotion piece.
-        promotions←1 8∊⍨⌈pawn_moves[;2]÷8
-        promoting←(pawn_moves⌿⍨4×promotions),(4×+/promotions)⍴offset+P.(Q R B N)
-        pawn_moves←promoting⍪(~promotions)⌿pawn_moves,0
-
-        pawn_moves
-        
-    }
-
-    generatePieceAttacks←{
-        ⍝ ⍺ ←→ lookup tables
-        ⍝ ⍵ ←→ piece type, from squares, occupancy
-        ⍝ ← ←→ boolean matrix, one row per from square, one column per square
-        
-        (piece squares occupied)←⍵
-        P←##.Pieces
-        L←##.LookupTables
-        piece=P.N:⍺.knight[squares;]
-        piece=P.K:⍺.king[squares;]
-        piece=P.B:⍺ generateSlidingAttacks squares L.diagonal occupied
-        piece=P.R:⍺ generateSlidingAttacks squares L.orthogonal occupied
-        piece=P.Q:⍺ generateSlidingAttacks squares L.(orthogonal,diagonal)occupied
+        promoting←1 8∊⍨⌈moves[;2]÷8
+        promotions←(moves⌿⍨4×promoting),(4×+/promoting)⍴offset+##.Pieces.(Q R B N)
+        promotions⍪(~promoting)⌿moves,0
     }
 
     generateSlidingAttacks←{
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ from squares, ray directions, occupancy
-        ⍝ ← ←→ boolean matrix, one row per from square, one column per square
+        ⍝ ← ←→ Boolean matrix, one row per from square, one column per square
         ⍝ Each ray ends at its first occupied square, which stays reachable
         ⍝ so that captures are included; own pieces are removed by the caller.
+
         (squares directions occupied)←⍵
         ⍝ Each on an empty array calls its operand on the prototype, whose
         ⍝ zeros are not valid squares.
@@ -136,30 +117,28 @@
     checkSquareAttacked←{
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ bitboards, squares, attacking side (0 white, 1 black)
-        ⍝ ← ←→ boolean vector, one item per square; 1 if any piece of
+        ⍝ ← ←→ Boolean vector, one item per square; 1 if any piece of
         ⍝      the attacking side attacks that square
-        
+
         (bitboards squares side)←⍵
         squares←,squares
-        P←##.Pieces
-        L←##.LookupTables
         attacker←bitboards[(6×side)+⍳6;]
         occupied←∨⌿bitboards
 
         ⍝ Attacks are symmetric: a piece on s attacks t exactly when the
         ⍝ same piece on t attacks s. Each square therefore looks outward
         ⍝ with every piece type and checks for an attacker of that type.
-        hits←⍺.knight[squares;]∧⍤1⊢attacker[P.N;]
-        hits∨←⍺.king[squares;]∧⍤1⊢attacker[P.K;]
-        hits∨←(⍺ generateSlidingAttacks squares L.diagonal occupied)∧⍤1⊢∨⌿attacker[P.(B Q);]
-        hits∨←(⍺ generateSlidingAttacks squares L.orthogonal occupied)∧⍤1⊢∨⌿attacker[P.(R Q);]
-        
+        hits←⍺.knight[squares;]∧⍤1⊢attacker[##.Pieces.N;]
+        hits∨←⍺.king[squares;]∧⍤1⊢attacker[##.Pieces.K;]
+        hits∨←(⍺ generateSlidingAttacks squares ##.LookupTables.DIAGONAL occupied)∧⍤1⊢∨⌿attacker[##.Pieces.(B Q);]
+        hits∨←(⍺ generateSlidingAttacks squares ##.LookupTables.ORTHOGONAL occupied)∧⍤1⊢∨⌿attacker[##.Pieces.(R Q);]
+
         ⍝ Pawns are the exception, as they attack forward only; the
         ⍝ defending side's pawn table gives the reverse direction.
-        hits∨←⍺.pawn[2-side;squares;]∧⍤1⊢attacker[P.P;]
+        hits∨←⍺.pawn[2-side;squares;]∧⍤1⊢attacker[##.Pieces.P;]
         ∨/hits
     }
- 
+
     perft←{
         ⍝ Performance test: counts the leaf nodes of the legal move tree
         ⍝ to a fixed depth. Comparing the counts with published reference
@@ -175,8 +154,10 @@
         depth=0:1
         legal_moves←lookups generateLegalMoves bitboards game_state
 
+        ⍝ Rank on an empty matrix calls makeMove on a prototype move, whose
+        ⍝ zeros are not valid squares; without legal moves there are no leaves.
         0=≢legal_moves:0
-        
+
         ⍝ At depth 1 each legal move is one leaf, so the moves need not be made.
         depth=1:≢legal_moves
         +/lookups∘perft¨(depth-1),¨↓bitboards game_state∘makeMove⍤1⊢legal_moves
@@ -188,34 +169,32 @@
         ⍝ ← ←→ bitboards, game state after the move
         (bitboards game_state)←⍺
         (from to promotion)←⍵
-        P←##.Pieces
-        G←##.GameState
-        side←game_state[G.side]
+        side←game_state[##.GameState.side]
         offset←6×side
         piece←⊃⍸bitboards[;from]
-        pawn←piece=offset+P.P
+        pawn←piece=offset+##.Pieces.P
         capture←∨/bitboards[;to]
 
         ⍝ An en passant capture removes the pawn behind the destination.
-        en_passant←pawn∧to=game_state[G.en_passant_square]
+        en_passant←pawn∧to=game_state[##.GameState.en_passant_square]
         captured←to-en_passant×8-16×side
         bitboards[;from,to,captured]←0
         bitboards[piece promotion⊃⍨1+promotion≠0;to]←1
 
         ⍝ Castling is the only king move of two files; the rook moves
         ⍝ to the square the king crosses.
-        castling←(piece=offset+P.K)∧2=|to-from
+        castling←(piece=offset+##.Pieces.K)∧2=|to-from
         rook_from_to←from+((1+to>from)⊃¯4 3),(to-from)÷2
-        bitboards[offset+P.R;castling/rook_from_to]←castling/0 1
+        bitboards[offset+##.Pieces.R;castling/rook_from_to]←castling/0 1
 
         ⍝ A right is lost once its king or rook square is left or
         ⍝ entered: by a king move, a rook move, or a rook capture.
         home←(5 8)(5 1)(61 64)(61 57)
-        game_state[G.castling_rights]∧←~∨/¨home∊¨⊂from to
-        game_state[G.en_passant_square]←(pawn∧16=|to-from)×(from+to)÷2
-        game_state[G.halfmove]←(~pawn∨capture)×1+game_state[G.halfmove]
-        game_state[G.fullmove]+←side
-        game_state[G.side]←~side
+        game_state[##.GameState.castling_rights]∧←~∨/¨home∊¨⊂from to
+        game_state[##.GameState.en_passant_square]←(pawn∧16=|to-from)×(from+to)÷2
+        game_state[##.GameState.halfmove]←(~pawn∨capture)×1+game_state[##.GameState.halfmove]
+        game_state[##.GameState.fullmove]+←side
+        game_state[##.GameState.side]←~side
         bitboards game_state
     }
 
@@ -227,8 +206,10 @@
 
         lookups←⍺
         (bitboards game_state)←⍵
-        
+
         pseudo_legal_moves←lookups generatePseudoLegalMoves bitboards game_state
+        ⍝ Rank on an empty matrix calls its operand on a prototype move,
+        ⍝ whose zeros are not valid squares.
         0=≢pseudo_legal_moves:0 3⍴0
 
         legal←lookups bitboards game_state∘checkMoveIsLegal⍤1⊢pseudo_legal_moves
@@ -243,14 +224,11 @@
         ⍝ ← ←→ 1 if the move does not leave the moving side's king attacked
 
         (lookups bitboards game_state)←⍺
-        move←⍵
-
         side←game_state[##.GameState.side]
         king←(6×side)+##.Pieces.K
 
-        bitboards_after←⊃bitboards game_state makeMove move
+        bitboards_after←⊃bitboards game_state makeMove ⍵
 
         ~⊃lookups checkSquareAttacked bitboards_after (⍸bitboards_after[king;])(~side)
     }
 :EndNamespace
- 
