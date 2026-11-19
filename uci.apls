@@ -4,10 +4,17 @@
 
 ⎕IO ⎕ML←1
 
+SOURCE_TYPES←'.apln' '.aplc' '.apli' '.aplf' '.aplo'
+
 findFiles←{{⍵[⍋⍵]}⊆⊃0(⎕NINFO⍠1)⍵}
 
-SOURCE_TYPES←'.apln' '.aplc' '.apli' '.aplf' '.aplo'
 isSourceFile←{(⊂3⊃1 ⎕NPARTS ⍵)∊SOURCE_TYPES}
+
+⍝ Each reply line is terminated by a newline; no replies writes nothing.
+writeLines←{('UTF-8'⎕UCS∊⍵,¨⎕UCS 10)⎕NAPPEND stdout 83}
+
+⍝ End of input means the GUI has gone away, which is treated as quit.
+readLine←{1005::UCI.CMD_QUIT ⋄ ⍞}
 
 args←2 ⎕NQ'.' 'GetCommandLineArgs'
 root←⊃1 ⎕NPARTS⊃args
@@ -17,12 +24,9 @@ _←{2 ⎕FIX'file://',⍵}¨(isSourceFile¨paths)/paths
 ⍝ Under dyalogscript, ⍞← writes to stderr and ⎕← ends lines with a
 ⍝ carriage return. UCI GUIs read newline-terminated lines from stdout,
 ⍝ so replies are written to the stdout file descriptor directly.
-stdout←'/dev/stdout'⎕NTIE 0
-⍝ Each reply line is terminated by a newline; no replies writes nothing.
-writeLines←{('UTF-8'⎕UCS∊⍵,¨⎕UCS 10)⎕NAPPEND stdout 83}
-
-⍝ End of input means the GUI has gone away, which is treated as quit.
-readLine←{1005::UCI.CMD_QUIT ⋄ ⍞}
+⍝ It is tied write-only: when stdout is a pipe, macOS refuses to open
+⍝ /dev/stdout for reading and writing, which is ⎕NTIE's default.
+stdout←'/dev/stdout'⎕NTIE 0 1
 
 state←UCI.newState LookupTables.createLookupTables ⍬
 :Repeat
