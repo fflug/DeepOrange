@@ -1,0 +1,51 @@
+:Namespace EvaluationTests
+    ⎕IO ⎕ML←1
+
+    ⍝ Scores are in centipawns from the point of view of the side to
+    ⍝ move: positive when the side to move is ahead.
+
+    score←{#.Evaluation.evaluate #.Board.initFromFEN ⍵}
+
+    test_start_position_scores_zero←{
+        0 #.Assert.eq score #.Helpers.START
+    }
+
+    test_bare_kings_score_zero←{
+        0 #.Assert.eq score'k7/8/8/8/8/8/8/K7 w - - 0 1'
+    }
+
+    test_equal_material_scores_zero←{
+        0 #.Assert.eq score'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1'
+    }
+
+    ⍝ Each case: piece letter, value of one extra piece of that type.
+    test_values_an_extra_piece_cases←(
+        ('pawn'('P' 100))
+        ('knight'('N' 320))
+        ('bishop'('B' 330))
+        ('rook'('R' 500))
+        ('queen'('Q' 900))
+    )
+    test_values_an_extra_piece←{
+        (letter value)←⍵
+        value #.Assert.eq score'k7/8/8/8/8/8/',letter,'7/K7 w - - 0 1'
+    }
+
+    test_scores_from_the_point_of_view_of_the_side_to_move←{
+        ¯100 #.Assert.eq score'k7/8/8/8/8/8/P7/K7 b - - 0 1'
+    }
+
+    test_scores_black_material_advantage_for_black_to_move←{
+        900 #.Assert.eq score'kq6/8/8/8/8/8/8/K7 b - - 0 1'
+    }
+
+    test_adds_the_values_of_several_pieces←{
+        200 #.Assert.eq score'k7/8/8/8/8/8/PP6/K7 w - - 0 1'
+    }
+
+    test_subtracts_the_opponents_material←{
+        ⍝ White rook against black knight.
+        180 #.Assert.eq score'kn6/8/8/8/8/8/8/K6R w - - 0 1'
+    }
+
+:EndNamespace
