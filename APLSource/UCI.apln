@@ -23,7 +23,7 @@
     ⍝ Move reported when the side to move has no legal move.
     NULL_MOVE←'0000'
 
-    ID_LINES←'id name RandomAPL' 'id author Finn Flug'REPLY_UCIOK
+    ID_LINES←'id name Deep Orange' 'id author Finn Flug'REPLY_UCIOK
     NO_REPLY←0⍴⊂''
 
     newState←{
