@@ -1,0 +1,26 @@
+:Namespace Evaluation
+    ⍝ Evaluation of positions.
+
+    ⎕IO ⎕ML←1
+
+    evaluate←{
+        ⍝ Material balance of a position.
+        ⍝ ⍵ ←→ bitboards, game state
+        ⍝ ← ←→ score in centipawns; positive when the side to move is ahead
+
+        (bitboards game_state)←⍵
+
+        ⍝ The weighted sum below is from white's point of view. Negating it
+        ⍝ when black is to move gives the side to move's point of view,
+        ⍝ which negamax search requires.
+        sign←1-2×game_state[##.GameState.side]
+
+        ⍝ Piece codes are bitboard row indices, so indexing by code puts
+        ⍝ each weight on its piece's row. Black pieces count negatively.
+        weights←12⍴0
+        weights[##.Pieces.(P N B R Q K)]←100 320 330 500 900 0
+        weights[##.Pieces.(p n b r q k)]←-weights[##.Pieces.(P N B R Q K)]
+        score←+/weights×+/bitboards
+        score×sign
+    }
+:EndNamespace
