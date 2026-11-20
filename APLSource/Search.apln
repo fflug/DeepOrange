@@ -42,6 +42,18 @@
         ⍝ ⍵ ←→ depth, bitboards, game state
         ⍝ ← ←→ move (from to promotion); ⍬ when there is no legal move
 
+        lookups←⍺
+        (depth bitboards game_state)←⍵
+
+        moves←lookups ##.MoveGeneration.generateLegalMoves bitboards game_state
+        0=≢moves:⍬
+
+        ⍝ The positions after the root moves are one ply from the root.
+        scores←-lookups{⍺ negamax(depth-1),(bitboards game_state ##.MoveGeneration.makeMove ⍵),1}⍤1⊢moves
+
+        ⍝ Pick one of the best moves at random to keep variety.
+        best←moves⌿⍨scores=⌈/scores
+        best[?≢best;] 
     }
 
     randomMove←{
@@ -49,7 +61,7 @@
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ bitboards, game state
         ⍝ ← ←→ move (from to promotion); ⍬ when there is no legal move
-        
+
         moves←⍺ ##.MoveGeneration.generateLegalMoves ⍵
         0=≢moves:⍬
         moves[?≢moves;]

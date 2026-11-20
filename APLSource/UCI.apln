@@ -65,7 +65,7 @@
         ⍝ ⍵ ←→ lookup tables, position
         ⍝ ← ←→ bestmove reply; the null move when there is no legal move
         (lookups position)←⍵
-        move←lookups ##.Search.randomMove position
+        move←lookups ##.Search.bestMove 2,position
         0=≢move:REPLY_BESTMOVE,' ',NULL_MOVE
         REPLY_BESTMOVE,' ',moveToUCI move
     }
