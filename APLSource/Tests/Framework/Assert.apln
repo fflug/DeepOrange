@@ -1,14 +1,14 @@
 :Namespace Assert
     ⍝ Assertions for test functions.
     ⍝ Each assertion returns 1 on success, so a dfn test can end with one.
-    ⍝ On failure it signals #.Tester.FAIL_EN, which the runner reports as
+    ⍝ On failure it signals #.Tests.Framework.Tester.FAIL_EN, which the runner reports as
     ⍝ FAIL rather than ERROR.
 
     ⎕IO ⎕ML←1
 
     fail←{
         ⍝ ⍵ ←→ failure message
-        ⎕SIGNAL⊂('EN'#.Tester.FAIL_EN)('Message'(,⍕⍵))
+        ⎕SIGNAL⊂('EN'#.Tests.Framework.Tester.FAIL_EN)('Message'(,⍕⍵))
     }
 
     eq←{

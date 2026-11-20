@@ -8,40 +8,40 @@
     FIELDS←'side' 'castling_rights' 'en_passant_square' 'halfmove' 'fullmove'
 
     test_returns_one_slot_per_index←{
-        (⌈/∊#.GameState.(side castling_rights en_passant_square halfmove fullmove))#.Assert.eq ≢#.GameState.init ⍺.full
+        (⌈/∊#.DeepOrange.GameState.(side castling_rights en_passant_square halfmove fullmove))#.Tests.Framework.Assert.eq ≢#.DeepOrange.GameState.init ⍺.full
     }
 
     test_reads_side_from_the_namespace←{
-        1 #.Assert.eq(#.GameState.init ⍺.full)[#.GameState.side]
+        1 #.Tests.Framework.Assert.eq(#.DeepOrange.GameState.init ⍺.full)[#.DeepOrange.GameState.side]
     }
 
     test_reads_castling_rights_from_the_namespace←{
-        1 0 1 0 #.Assert.eq(#.GameState.init ⍺.full)[#.GameState.castling_rights]
+        1 0 1 0 #.Tests.Framework.Assert.eq(#.DeepOrange.GameState.init ⍺.full)[#.DeepOrange.GameState.castling_rights]
     }
 
     test_reads_the_en_passant_square_from_the_namespace←{
-        20 #.Assert.eq(#.GameState.init ⍺.full)[#.GameState.en_passant_square]
+        20 #.Tests.Framework.Assert.eq(#.DeepOrange.GameState.init ⍺.full)[#.DeepOrange.GameState.en_passant_square]
     }
 
     test_reads_the_halfmove_clock_from_the_namespace←{
-        3 #.Assert.eq(#.GameState.init ⍺.full)[#.GameState.halfmove]
+        3 #.Tests.Framework.Assert.eq(#.DeepOrange.GameState.init ⍺.full)[#.DeepOrange.GameState.halfmove]
     }
 
     test_reads_the_fullmove_number_from_the_namespace←{
-        12 #.Assert.eq(#.GameState.init ⍺.full)[#.GameState.fullmove]
+        12 #.Tests.Framework.Assert.eq(#.DeepOrange.GameState.init ⍺.full)[#.DeepOrange.GameState.fullmove]
     }
 
     test_ignores_unrelated_fields_such_as_bitboard←{
         ns←⎕NS ⍺.full
         ns.bitboard←12 64⍴0
-        (#.GameState.init ⍺.full)#.Assert.eq #.GameState.init ns
+        (#.DeepOrange.GameState.init ⍺.full)#.Tests.Framework.Assert.eq #.DeepOrange.GameState.init ns
     }
 
     test_rejects_a_namespace_missing_a_field_cases←{⍵ ⍵}¨FIELDS
     test_rejects_a_namespace_missing_a_field←{
         ns←⎕NS ⍺.full
         _←ns.⎕EX ⍵
-        (#.GameState.init #.Assert.raises 6)ns
+        (#.DeepOrange.GameState.init #.Tests.Framework.Assert.raises 6)ns
     }
 
 :EndNamespace

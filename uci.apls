@@ -14,12 +14,15 @@ isSourceFile←{(⊂3⊃1 ⎕NPARTS ⍵)∊SOURCE_TYPES}
 writeLines←{('UTF-8'⎕UCS∊⍵,¨⎕UCS 10)⎕NAPPEND stdout 83}
 
 ⍝ End of input means the GUI has gone away, which is treated as quit.
-readLine←{1005::UCI.CMD_QUIT ⋄ ⍞}
+readLine←{1005::DeepOrange.UCI.CMD_QUIT ⋄ ⍞}
 
 args←2 ⎕NQ'.' 'GetCommandLineArgs'
 root←⊃1 ⎕NPARTS⊃args
-paths←findFiles root,'APLSource/*'
-_←{2 ⎕FIX'file://',⍵}¨(isSourceFile¨paths)/paths
+⍝ The engine is fixed into #.DeepOrange, the namespace Link creates
+⍝ when APLSource is linked into #.
+'DeepOrange'⎕NS⍬
+paths←findFiles root,'APLSource/DeepOrange/*'
+_←{DeepOrange.⎕FIX'file://',⍵}¨(isSourceFile¨paths)/paths
 
 ⍝ Under dyalogscript, ⍞← writes to stderr and ⎕← ends lines with a
 ⍝ carriage return. UCI GUIs read newline-terminated lines from stdout,
@@ -28,10 +31,10 @@ _←{2 ⎕FIX'file://',⍵}¨(isSourceFile¨paths)/paths
 ⍝ /dev/stdout for reading and writing, which is ⎕NTIE's default.
 stdout←'/dev/stdout'⎕NTIE 0 1
 
-state←UCI.newState LookupTables.createLookupTables ⍬
+state←DeepOrange.UCI.newState DeepOrange.LookupTables.createLookupTables ⍬
 :Repeat
-    (state replies)←state UCI.handle readLine ⍬
+    (state replies)←state DeepOrange.UCI.handle readLine ⍬
     _←writeLines replies
-:Until UCI.finished state
+:Until DeepOrange.UCI.finished state
 
 ⎕OFF

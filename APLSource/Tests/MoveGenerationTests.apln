@@ -1,0 +1,465 @@
+:Namespace MoveGenerationTests
+    ⎕IO ⎕ML←1
+
+    ⍝ moves are rows of (from to promotion); promotion is 0 for a
+    ⍝ non-promoting move, otherwise the piece type promoted to.
+
+    setup←{#.DeepOrange.LookupTables.createLookupTables ⍬}
+
+    moves←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ FEN
+        #.Tests.Helpers.sortRows ⍺ #.DeepOrange.MoveGeneration.generatePseudoLegalMoves #.DeepOrange.Board.initFromFEN ⍵
+    }
+
+    from←{
+        ⍝ Moves from one square.
+        ⍝ ⍺ ←→ move matrix
+        ⍝ ⍵ ←→ square name
+        ⍺⌿⍨⍺[;1]=#.Tests.Helpers.sq ⍵
+    }
+
+    targets←{
+        ⍝ Destination squares of the moves from one square.
+        (⍺ from ⍵)[;2]
+    }
+
+    row←{
+        ⍝ 'e2 e4' ←→ from to 0
+        (#.Tests.Helpers.sqs ⍵),0
+    }
+
+    ⍝ Start position
+
+    test_start_position_has_twenty_moves_for_white←{
+        20 #.Tests.Framework.Assert.eq ≢⍺ moves #.Tests.Helpers.START
+    }
+
+    test_start_position_has_twenty_moves_for_black←{
+        20 #.Tests.Framework.Assert.eq ≢⍺ moves'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1'
+    }
+
+    test_knight_on_g1_reaches_f3_and_h3←{
+        (#.Tests.Helpers.sqs'f3 h3')#.Tests.Framework.Assert.eq(⍺ moves #.Tests.Helpers.START)targets'g1'
+    }
+
+    test_never_moves_onto_own_pieces←{
+        own←∨⌿(⊃#.DeepOrange.Board.initFromFEN #.Tests.Helpers.START)[⍳6;]
+        #.Tests.Framework.Assert.ok ~∨/own[(⍺ moves #.Tests.Helpers.START)[;2]]
+    }
+
+    ⍝ Pawns
+
+    test_pawn_on_home_rank_can_push_one_or_two_squares←{
+        (#.Tests.Helpers.sqs'e3 e4')#.Tests.Framework.Assert.eq(⍺ moves'k7/8/8/8/8/8/4P3/K7 w - - 0 1')targets'e2'
+    }
+
+    test_pawn_off_home_rank_pushes_one_square←{
+        (,#.Tests.Helpers.sq'e4')#.Tests.Framework.Assert.eq(⍺ moves'k7/8/8/8/8/4P3/8/K7 w - - 0 1')targets'e3'
+    }
+
+    test_black_pawn_pushes_towards_rank_one←{
+        (#.Tests.Helpers.sqs'd5 d6')#.Tests.Framework.Assert.eq(⍺ moves'k7/3p4/8/8/8/8/8/K7 b - - 0 1')targets'd7'
+    }
+
+    test_blocked_pawn_cannot_push←{
+        ⍬ #.Tests.Framework.Assert.eq(⍺ moves'k7/8/8/4p3/4P3/8/8/K7 w - - 0 1')targets'e4'
+    }
+
+    test_pawn_cannot_double_push_through_a_piece←{
+        ⍬ #.Tests.Framework.Assert.eq(⍺ moves'k7/8/8/8/8/4n3/4P3/K7 w - - 0 1')targets'e2'
+    }
+
+    test_pawn_captures_diagonally←{
+        (#.Tests.Helpers.sqs'd5 e5')#.Tests.Framework.Assert.eq(⍺ moves'k7/8/8/3p4/4P3/8/8/K7 w - - 0 1')targets'e4'
+    }
+
+    test_pawn_captures_en_passant←{
+        #.Tests.Framework.Assert.ok(⊂row'e5 d6')∊↓⍺ moves'k7/8/8/3pP3/8/8/8/K7 w - d6 0 1'
+    }
+
+    test_pawn_reaching_the_last_rank_promotes_to_four_pieces←{
+        expected←#.Tests.Helpers.sortRows(4 2⍴#.Tests.Helpers.sqs'e7 e8'),#.DeepOrange.Pieces.(Q R B N)
+        expected #.Tests.Framework.Assert.eq(⍺ moves'k7/4P3/8/8/8/8/8/K7 w - - 0 1')from'e7'
+    }
+
+    ⍝ Sliding pieces
+
+    test_rook_is_blocked_by_own_pieces←{
+        (#.Tests.Helpers.sqs'b1 c1 d1 e1 f1 g1')#.Tests.Framework.Assert.eq(⍺ moves'k7/8/8/8/8/8/P7/R6K w - - 0 1')targets'a1'
+    }
+
+    test_rook_captures_the_first_enemy_piece_and_stops←{
+        (#.Tests.Helpers.sqs'b1 c1 d1 e1 f1 g1 a2 a3')#.Tests.Framework.Assert.eq(⍺ moves'k7/8/8/8/8/p7/8/R6K w - - 0 1')targets'a1'
+    }
+
+    test_bishop_moves_diagonally_only←{
+        expected←#.Tests.Helpers.sqs'b1 d1 b3 d3 a4 e4 f5 g6 h7'
+        (expected[⍋expected])#.Tests.Framework.Assert.eq(⍺ moves'k7/8/8/8/8/8/2B5/K7 w - - 0 1')targets'c2'
+    }
+
+    test_queen_in_the_corner_of_an_empty_board_has_twenty_one_moves←{
+        21 #.Tests.Framework.Assert.eq ≢(⍺ moves'6k1/8/8/8/8/7K/8/Q7 w - - 0 1')from'a1'
+    }
+
+    ⍝ Attacked squares
+
+    attacked←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ FEN, square names, attacking side (0 white, 1 black)
+        ⍝ ← ←→ one boolean per square name
+        (fen names side)←⍵
+        bitboards←⊃#.DeepOrange.Board.initFromFEN fen
+        ⍺ #.DeepOrange.MoveGeneration.checkSquareAttacked bitboards(#.Tests.Helpers.sqs names)side
+    }
+
+    test_square_far_from_all_pieces_is_not_attacked←{
+        (,0)#.Tests.Framework.Assert.eq ⍺ attacked'4k3/8/8/8/8/8/8/4K3 w - - 0 1' 'd4' 1
+    }
+
+    test_white_pawn_attacks_diagonally_forward_only←{
+        1 0 1 0 #.Tests.Framework.Assert.eq ⍺ attacked'k7/8/8/8/4P3/8/8/K7 w - - 0 1' 'd5 e5 f5 d3' 0
+    }
+
+    test_black_pawn_attacks_diagonally_towards_rank_one←{
+        1 0 1 0 #.Tests.Framework.Assert.eq ⍺ attacked'k7/8/8/4p3/8/8/8/K7 w - - 0 1' 'd4 e4 f4 d6' 1
+    }
+
+    test_knight_attacks_its_jump_squares←{
+        1 1 0 #.Tests.Framework.Assert.eq ⍺ attacked'k7/8/8/8/8/8/8/K5n1 w - - 0 1' 'f3 h3 g3' 1
+    }
+
+    test_king_attacks_adjacent_squares←{
+        1 1 0 #.Tests.Framework.Assert.eq ⍺ attacked'k7/8/8/8/8/8/8/K7 w - - 0 1' 'b8 b7 c8' 1
+    }
+
+    test_rook_attack_stops_at_the_first_piece←{
+        1 1 0 #.Tests.Framework.Assert.eq ⍺ attacked'k7/8/8/8/N7/8/8/r6K w - - 0 1' 'a3 a4 a5' 1
+    }
+
+    test_rook_does_not_attack_diagonally←{
+        (,0)#.Tests.Framework.Assert.eq ⍺ attacked'k7/8/8/8/8/8/8/r6K w - - 0 1' 'b2' 1
+    }
+
+    test_bishop_attack_stops_at_the_first_piece←{
+        1 1 0 #.Tests.Framework.Assert.eq ⍺ attacked'k7/8/8/8/8/4P3/8/2b4K w - - 0 1' 'd2 e3 f4' 1
+    }
+
+    test_bishop_does_not_attack_orthogonally←{
+        (,0)#.Tests.Framework.Assert.eq ⍺ attacked'k7/8/8/8/8/8/8/2b4K w - - 0 1' 'c2' 1
+    }
+
+    test_queen_attacks_orthogonally_and_diagonally←{
+        1 1 0 #.Tests.Framework.Assert.eq ⍺ attacked'k7/8/8/8/8/8/8/3q3K w - - 0 1' 'd5 g4 e3' 1
+    }
+
+    test_pieces_of_the_other_side_do_not_count_as_attackers←{
+        (,0)#.Tests.Framework.Assert.eq ⍺ attacked'k7/8/8/8/8/8/8/R6K w - - 0 1' 'a4' 1
+    }
+
+    test_white_pieces_attack_when_white_is_the_attacking_side←{
+        (,1)#.Tests.Framework.Assert.eq ⍺ attacked'k7/8/8/8/8/8/8/R6K w - - 0 1' 'a4' 0
+    }
+
+    ⍝ Making moves
+
+    play←{
+        ⍝ ⍵ ←→ FEN, move as 'from to', promotion (0 for none)
+        ⍝ ← ←→ bitboards, game state after the move
+        (fen squares promotion)←⍵
+        (#.DeepOrange.Board.initFromFEN fen)#.DeepOrange.MoveGeneration.makeMove(#.Tests.Helpers.sqs squares),promotion
+    }
+
+    on←{
+        ⍝ ⍺ ←→ bitboards, game state
+        ⍝ ⍵ ←→ square names
+        ⍝ ← ←→ piece on each square, 0 when empty
+        (⍳12)+.×(⊃⍺)[;#.Tests.Helpers.sqs ⍵]
+    }
+
+    state←{
+        ⍝ ⍺ ←→ bitboards, game state
+        ⍝ ⍵ ←→ game state index, e.g. #.DeepOrange.GameState.side
+        (2⊃⍺)[⍵]
+    }
+
+    CASTLING←'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1'
+
+    test_moves_the_piece_to_its_destination←{
+        (0,#.DeepOrange.Pieces.N)#.Tests.Framework.Assert.eq(play #.Tests.Helpers.START'g1 f3' 0)on'g1 f3'
+    }
+
+    test_capture_leaves_only_the_capturing_piece_on_the_destination←{
+        position←play'k7/8/8/3p4/4P3/8/8/K7 w - - 0 1' 'e4 d5' 0
+        1 #.Tests.Framework.Assert.eq+/(⊃position)[;#.Tests.Helpers.sq'd5']
+    }
+
+    test_en_passant_removes_the_pawn_behind_the_destination←{
+        (0 0,#.DeepOrange.Pieces.P)#.Tests.Framework.Assert.eq(play'k7/8/8/3pP3/8/8/8/K7 w - d6 0 1' 'e5 d6' 0)on'e5 d5 d6'
+    }
+
+    test_promotion_replaces_the_pawn_with_the_promoted_piece←{
+        position←play'k7/8/8/8/8/8/4p3/K4N2 b - - 0 1' 'e2 f1'#.DeepOrange.Pieces.n
+        (0,#.DeepOrange.Pieces.n)#.Tests.Framework.Assert.eq position on'e2 f1'
+    }
+
+    test_white_kingside_castling_moves_the_rook_to_f1←{
+        #.DeepOrange.Pieces.(0 R K 0)#.Tests.Framework.Assert.eq(play CASTLING'e1 g1' 0)on'e1 f1 g1 h1'
+    }
+
+    test_white_queenside_castling_moves_the_rook_to_d1←{
+        #.DeepOrange.Pieces.(0 0 K R 0)#.Tests.Framework.Assert.eq(play CASTLING'e1 c1' 0)on'a1 b1 c1 d1 e1'
+    }
+
+    test_black_kingside_castling_moves_the_rook_to_f8←{
+        fen←'r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1'
+        #.DeepOrange.Pieces.(0 r k 0)#.Tests.Framework.Assert.eq(play fen'e8 g8' 0)on'e8 f8 g8 h8'
+    }
+
+    test_king_move_clears_both_castling_rights_of_its_side←{
+        0 0 1 1 #.Tests.Framework.Assert.eq(play CASTLING'e1 e2' 0)state #.DeepOrange.GameState.castling_rights
+    }
+
+    test_rook_move_clears_the_castling_right_on_its_side←{
+        0 1 1 1 #.Tests.Framework.Assert.eq(play CASTLING'h1 h2' 0)state #.DeepOrange.GameState.castling_rights
+    }
+
+    test_capturing_a_rook_on_its_home_square_clears_that_castling_right←{
+        1 0 1 0 #.Tests.Framework.Assert.eq(play CASTLING'a1 a8' 0)state #.DeepOrange.GameState.castling_rights
+    }
+
+    test_other_moves_keep_castling_rights←{
+        1 1 1 1 #.Tests.Framework.Assert.eq(play #.Tests.Helpers.START'g1 f3' 0)state #.DeepOrange.GameState.castling_rights
+    }
+
+    test_double_pawn_push_sets_the_en_passant_square←{
+        (#.Tests.Helpers.sq'e3')#.Tests.Framework.Assert.eq(play #.Tests.Helpers.START'e2 e4' 0)state #.DeepOrange.GameState.en_passant_square
+    }
+
+    test_single_pawn_push_sets_no_en_passant_square←{
+        0 #.Tests.Framework.Assert.eq(play #.Tests.Helpers.START'e2 e3' 0)state #.DeepOrange.GameState.en_passant_square
+    }
+
+    test_any_other_move_clears_the_en_passant_square←{
+        0 #.Tests.Framework.Assert.eq(play'k7/8/8/3pP3/8/8/8/K7 w - d6 0 1' 'a1 a2' 0)state #.DeepOrange.GameState.en_passant_square
+    }
+
+    test_side_to_move_changes←{
+        1 #.Tests.Framework.Assert.eq(play #.Tests.Helpers.START'g1 f3' 0)state #.DeepOrange.GameState.side
+    }
+
+    test_quiet_piece_move_increments_the_halfmove_clock←{
+        6 #.Tests.Framework.Assert.eq(play'k7/8/8/8/8/8/8/K5N1 w - - 5 9' 'g1 f3' 0)state #.DeepOrange.GameState.halfmove
+    }
+
+    test_pawn_move_resets_the_halfmove_clock←{
+        0 #.Tests.Framework.Assert.eq(play'k7/8/8/8/8/8/4P3/K7 w - - 5 9' 'e2 e3' 0)state #.DeepOrange.GameState.halfmove
+    }
+
+    test_capture_resets_the_halfmove_clock←{
+        0 #.Tests.Framework.Assert.eq(play'k7/8/8/3p4/8/8/8/K2R4 w - - 5 9' 'd1 d5' 0)state #.DeepOrange.GameState.halfmove
+    }
+
+    test_white_move_keeps_the_fullmove_number←{
+        9 #.Tests.Framework.Assert.eq(play'k7/8/8/8/8/8/8/K5N1 w - - 5 9' 'g1 f3' 0)state #.DeepOrange.GameState.fullmove
+    }
+
+    test_black_move_increments_the_fullmove_number←{
+        10 #.Tests.Framework.Assert.eq(play'k7/8/8/8/8/8/8/K5N1 b - - 5 9' 'a8 b8' 0)state #.DeepOrange.GameState.fullmove
+    }
+
+    ⍝ Castling
+    ⍝ A castling move is the king's two-square move, e.g. e1 g1 0.
+
+    test_white_castles_kingside←{
+        #.Tests.Framework.Assert.ok(⊂row'e1 g1')∊↓⍺ moves'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1'
+    }
+
+    test_white_castles_queenside←{
+        #.Tests.Framework.Assert.ok(⊂row'e1 c1')∊↓⍺ moves'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1'
+    }
+
+    test_black_castles_kingside←{
+        #.Tests.Framework.Assert.ok(⊂row'e8 g8')∊↓⍺ moves'r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1'
+    }
+
+    test_black_castles_queenside←{
+        #.Tests.Framework.Assert.ok(⊂row'e8 c8')∊↓⍺ moves'r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1'
+    }
+
+    test_king_with_both_castling_rights_has_seven_moves←{
+        (#.Tests.Helpers.sqs'c1 d1 f1 g1 d2 e2 f2')#.Tests.Framework.Assert.eq(⍺ moves'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1')targets'e1'
+    }
+
+    test_king_cannot_castle_without_castling_rights←{
+        (#.Tests.Helpers.sqs'd1 f1 d2 e2 f2')#.Tests.Framework.Assert.eq(⍺ moves'r3k2r/8/8/8/8/8/8/R3K2R w - - 0 1')targets'e1'
+    }
+
+    test_kingside_right_alone_does_not_permit_queenside_castling←{
+        (#.Tests.Helpers.sqs'd1 f1 g1 d2 e2 f2')#.Tests.Framework.Assert.eq(⍺ moves'r3k2r/8/8/8/8/8/8/R3K2R w K - 0 1')targets'e1'
+    }
+
+    test_white_rights_do_not_let_black_castle←{
+        (#.Tests.Helpers.sqs'd7 e7 f7 d8 f8')#.Tests.Framework.Assert.eq(⍺ moves'r3k2r/8/8/8/8/8/8/R3K2R b KQ - 0 1')targets'e8'
+    }
+
+    test_king_cannot_castle_kingside_through_a_piece←{
+        #.Tests.Framework.Assert.ok~(⊂row'e1 g1')∊↓⍺ moves'r3k2r/8/8/8/8/8/8/R3K1NR w KQkq - 0 1'
+    }
+
+    test_king_cannot_castle_queenside_when_b1_is_occupied←{
+        #.Tests.Framework.Assert.ok~(⊂row'e1 c1')∊↓⍺ moves'r3k2r/8/8/8/8/8/8/RN2K2R w KQkq - 0 1'
+    }
+
+    test_king_cannot_castle_out_of_check←{
+        targets←(⍺ moves'4k3/8/8/4r3/8/8/8/R3K2R w KQ - 0 1')targets'e1'
+        #.Tests.Framework.Assert.ok~∨/(#.Tests.Helpers.sqs'c1 g1')∊targets
+    }
+
+    test_king_cannot_castle_kingside_across_an_attacked_square←{
+        #.Tests.Framework.Assert.ok~(⊂row'e1 g1')∊↓⍺ moves'4k3/8/8/5r2/8/8/8/R3K2R w KQ - 0 1'
+    }
+
+    test_king_cannot_castle_queenside_across_an_attacked_square←{
+        #.Tests.Framework.Assert.ok~(⊂row'e1 c1')∊↓⍺ moves'4k3/8/8/3r4/8/8/8/R3K2R w KQ - 0 1'
+    }
+
+    test_attacked_b1_does_not_prevent_queenside_castling←{
+        #.Tests.Framework.Assert.ok(⊂row'e1 c1')∊↓⍺ moves'4k3/8/8/1r6/8/8/8/R3K2R w KQ - 0 1'
+    }
+
+    ⍝ King in check
+
+    inCheck←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ FEN, side (0 white, 1 black)
+        (fen side)←⍵
+        ⍺ #.DeepOrange.MoveGeneration.isKingInCheck(⊃#.DeepOrange.Board.initFromFEN fen)side
+    }
+
+    test_king_attacked_by_a_rook_is_in_check←{
+        1 #.Tests.Framework.Assert.eq ⍺ inCheck'k7/8/8/8/8/8/8/K6r w - - 0 1' 0
+    }
+
+    test_king_not_attacked_is_not_in_check←{
+        0 #.Tests.Framework.Assert.eq ⍺ inCheck #.Tests.Helpers.START 0
+    }
+
+    test_reports_check_for_the_given_side_only←{
+        ⍝ The black king is attacked; the white king is not.
+        (1 0)#.Tests.Framework.Assert.eq ⍺∘inCheck¨('k6R/8/8/8/8/8/8/K7 w - - 0 1' 1)('k6R/8/8/8/8/8/8/K7 w - - 0 1' 0)
+    }
+
+    ⍝ Legal moves
+    ⍝ A legal move is a pseudo-legal move that does not leave the
+    ⍝ moving side's king attacked.
+
+    legal←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ FEN
+        #.Tests.Helpers.sortRows ⍺ #.DeepOrange.MoveGeneration.generateLegalMoves #.DeepOrange.Board.initFromFEN ⍵
+    }
+
+    test_start_position_has_twenty_legal_moves←{
+        20 #.Tests.Framework.Assert.eq ≢⍺ legal #.Tests.Helpers.START
+    }
+
+    test_pinned_knight_has_no_legal_moves←{
+        ⍬ #.Tests.Framework.Assert.eq(⍺ legal'k7/8/8/8/4r3/8/4N3/4K3 w - - 0 1')targets'e2'
+    }
+
+    test_pinned_rook_moves_only_along_the_pin_line←{
+        (#.Tests.Helpers.sqs'e3 e4 e5 e6 e7')#.Tests.Framework.Assert.eq(⍺ legal'k7/4r3/8/8/8/8/4R3/4K3 w - - 0 1')targets'e2'
+    }
+
+    test_pinned_black_bishop_has_no_legal_moves←{
+        ⍬ #.Tests.Framework.Assert.eq(⍺ legal'k7/b7/8/8/8/8/8/R6K b - - 0 1')targets'a7'
+    }
+
+    test_king_cannot_move_onto_an_attacked_square←{
+        (,#.Tests.Helpers.sq'b1')#.Tests.Framework.Assert.eq(⍺ legal'k7/8/8/8/8/8/2r5/K7 w - - 0 1')targets'a1'
+    }
+
+    test_moves_that_ignore_a_check_are_excluded←{
+        expected←#.Tests.Helpers.sortRows↑row¨'e1 d2' 'e1 e2' 'e1 f2'
+        expected #.Tests.Framework.Assert.eq ⍺ legal'4k3/8/8/8/8/8/P7/4K2r w - - 0 1'
+    }
+
+    test_check_can_be_blocked←{
+        (,#.Tests.Helpers.sq'f1')#.Tests.Framework.Assert.eq(⍺ legal'4k3/8/8/8/8/3B4/8/4K2r w - - 0 1')targets'd3'
+    }
+
+    test_king_can_capture_an_undefended_checking_piece←{
+        (1 3⍴row'a1 b2')#.Tests.Framework.Assert.eq ⍺ legal'k7/8/8/8/8/8/1r6/K7 w - - 0 1'
+    }
+
+    test_king_cannot_capture_a_defended_piece←{
+        #.Tests.Framework.Assert.ok~(⊂row'a1 b2')∊↓⍺ legal'k7/8/8/8/8/2p5/1r6/K7 w - - 0 1'
+    }
+
+    test_en_passant_that_exposes_the_king_along_the_rank_is_excluded←{
+        #.Tests.Framework.Assert.ok~(⊂row'e5 d6')∊↓⍺ legal'k7/8/8/K2pP2r/8/8/8/8 w - d6 0 1'
+    }
+
+    test_king_cannot_castle_onto_an_attacked_square←{
+        #.Tests.Framework.Assert.ok~(⊂row'e1 g1')∊↓⍺ legal'4k1r1/8/8/8/8/8/8/R3K2R w KQ - 0 1'
+    }
+
+    test_castling_is_legal_when_no_square_is_attacked←{
+        #.Tests.Framework.Assert.ok∧/(row¨'e1 g1' 'e1 c1')∊↓⍺ legal'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1'
+    }
+
+    test_checkmate_has_no_legal_moves←{
+        0 3 #.Tests.Framework.Assert.eq⍴⍺ legal'R5k1/5ppp/8/8/8/8/8/6K1 b - - 0 1'
+    }
+
+    test_stalemate_has_no_legal_moves←{
+        0 3 #.Tests.Framework.Assert.eq⍴⍺ legal'k7/8/1Q6/8/8/8/8/7K b - - 0 1'
+    }
+
+    ⍝ Perft
+    ⍝ Expected counts are the published reference values for each
+    ⍝ position. Depths are kept low so the suite stays fast.
+
+    perft←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ FEN, depth
+        (fen depth)←⍵
+        ⍺ #.DeepOrange.MoveGeneration.perft depth,#.DeepOrange.Board.initFromFEN fen
+    }
+
+    KIWIPETE←'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1'
+
+    test_perft_at_depth_zero_counts_the_position_itself←{
+        1 #.Tests.Framework.Assert.eq ⍺ perft #.Tests.Helpers.START 0
+    }
+
+    test_perft_at_depth_one_counts_the_legal_moves←{
+        20 #.Tests.Framework.Assert.eq ⍺ perft #.Tests.Helpers.START 1
+    }
+
+    test_perft_of_a_position_with_no_legal_moves_is_zero←{
+        0 #.Tests.Framework.Assert.eq ⍺ perft'k7/8/1Q6/8/8/8/8/7K b - - 0 1' 1
+    }
+
+    test_perft_of_the_start_position_at_depth_three←{
+        8902 #.Tests.Framework.Assert.eq ⍺ perft #.Tests.Helpers.START 3
+    }
+
+    test_perft_of_kiwipete_at_depth_two←{
+        2039 #.Tests.Framework.Assert.eq ⍺ perft KIWIPETE 2
+    }
+
+    test_perft_of_the_rook_and_pawn_endgame_at_depth_three←{
+        2812 #.Tests.Framework.Assert.eq ⍺ perft'8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1' 3
+    }
+
+    test_perft_of_the_promotion_position_at_depth_two←{
+        264 #.Tests.Framework.Assert.eq ⍺ perft'r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1' 2
+    }
+
+    test_perft_of_the_discovered_check_position_at_depth_two←{
+        1486 #.Tests.Framework.Assert.eq ⍺ perft'rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8' 2
+    }
+
+:EndNamespace

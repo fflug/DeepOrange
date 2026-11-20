@@ -1,52 +1,52 @@
 :Namespace SearchTests
     ⎕IO ⎕ML←1
 
-    setup←{#.LookupTables.createLookupTables ⍬}
+    setup←{#.DeepOrange.LookupTables.createLookupTables ⍬}
 
     pick←{
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ FEN
-        ⍺ #.Search.randomMove #.Board.initFromFEN ⍵
+        ⍺ #.DeepOrange.Search.randomMove #.DeepOrange.Board.initFromFEN ⍵
     }
 
     legal←{
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ FEN
-        ↓⍺ #.MoveGeneration.generateLegalMoves #.Board.initFromFEN ⍵
+        ↓⍺ #.DeepOrange.MoveGeneration.generateLegalMoves #.DeepOrange.Board.initFromFEN ⍵
     }
 
     test_returns_a_legal_move←{
-        #.Assert.ok(⊂⍺ pick #.Helpers.START)∊⍺ legal #.Helpers.START
+        #.Tests.Framework.Assert.ok(⊂⍺ pick #.Tests.Helpers.START)∊⍺ legal #.Tests.Helpers.START
     }
 
     test_returns_a_legal_move_for_black←{
         fen←'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'
-        #.Assert.ok(⊂⍺ pick fen)∊⍺ legal fen
+        #.Tests.Framework.Assert.ok(⊂⍺ pick fen)∊⍺ legal fen
     }
 
     test_returns_a_three_item_move_vector←{
-        (,3)#.Assert.eq⍴⍺ pick #.Helpers.START
+        (,3)#.Tests.Framework.Assert.eq⍴⍺ pick #.Tests.Helpers.START
     }
 
     test_returns_the_only_legal_move←{
         ⍝ The rook on the b-file leaves the king a single square.
-        ((#.Helpers.sqs'a8 a7'),0)#.Assert.eq ⍺ pick'k7/8/8/8/8/8/8/1R5K b - - 0 1'
+        ((#.Tests.Helpers.sqs'a8 a7'),0)#.Tests.Framework.Assert.eq ⍺ pick'k7/8/8/8/8/8/8/1R5K b - - 0 1'
     }
 
     test_chooses_every_legal_move_over_many_draws←{
         ⍝ With 20 equally likely moves, 1000 draws miss a given move with
         ⍝ probability (19÷20)*1000, below 1E¯22.
         lookups←⍺
-        drawn←∪{lookups pick #.Helpers.START}¨⍳1000
-        #.Assert.ok(⍺ legal #.Helpers.START)≡⍥{⍵[⍋⍵]}drawn
+        drawn←∪{lookups pick #.Tests.Helpers.START}¨⍳1000
+        #.Tests.Framework.Assert.ok(⍺ legal #.Tests.Helpers.START)≡⍥{⍵[⍋⍵]}drawn
     }
 
     test_returns_an_empty_vector_when_checkmated←{
-        ⍬ #.Assert.eq ⍺ pick'k7/1Q6/1K6/8/8/8/8/8 b - - 0 1'
+        ⍬ #.Tests.Framework.Assert.eq ⍺ pick'k7/1Q6/1K6/8/8/8/8/8 b - - 0 1'
     }
 
     test_returns_an_empty_vector_when_stalemated←{
-        ⍬ #.Assert.eq ⍺ pick'k7/8/1Q6/8/8/8/8/7K b - - 0 1'
+        ⍬ #.Tests.Framework.Assert.eq ⍺ pick'k7/8/1Q6/8/8/8/8/7K b - - 0 1'
     }
 
     ⍝ negamax and bestMove
@@ -55,20 +55,20 @@
     ⍝ A side checkmated ply half-moves from the root scores ply-MATE, so
     ⍝ from the winning side a faster mate scores higher.
 
-    position←{#.Board.initFromFEN ⍵}
+    position←{#.DeepOrange.Board.initFromFEN ⍵}
 
     score←{
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ depth, FEN
         (depth fen)←⍵
-        ⍺ #.Search.negamax depth,position fen
+        ⍺ #.DeepOrange.Search.negamax depth,position fen
     }
 
     best←{
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ depth, FEN
         (depth fen)←⍵
-        ⍺ #.Search.bestMove depth,position fen
+        ⍺ #.DeepOrange.Search.bestMove depth,position fen
     }
 
     isCheckmate←{
@@ -76,10 +76,10 @@
         ⍝ ⍵ ←→ bitboards, game state
         ⍝ ← ←→ 1 if the side to move is in check and has no legal move
         (bitboards game_state)←⍵
-        side←game_state[#.GameState.side]
-        king←⍸bitboards[(6×side)+#.Pieces.K;]
-        in_check←⊃⍺ #.MoveGeneration.checkSquareAttacked bitboards king(~side)
-        in_check∧0=≢⍺ #.MoveGeneration.generateLegalMoves ⍵
+        side←game_state[#.DeepOrange.GameState.side]
+        king←⍸bitboards[(6×side)+#.DeepOrange.Pieces.K;]
+        in_check←⊃⍺ #.DeepOrange.MoveGeneration.checkSquareAttacked bitboards king(~side)
+        in_check∧0=≢⍺ #.DeepOrange.MoveGeneration.generateLegalMoves ⍵
     }
 
     hasMateInOne←{
@@ -87,8 +87,8 @@
         ⍝ ⍵ ←→ bitboards, game state
         ⍝ ← ←→ 1 if some legal move checkmates the opponent
         lookups←⍺
-        moves←↓⍺ #.MoveGeneration.generateLegalMoves ⍵
-        ∨/{lookups isCheckmate ⍵}¨⍵∘#.MoveGeneration.makeMove¨moves
+        moves←↓⍺ #.DeepOrange.MoveGeneration.generateLegalMoves ⍵
+        ∨/{lookups isCheckmate ⍵}¨⍵∘#.DeepOrange.MoveGeneration.makeMove¨moves
     }
 
     ⍝ White to move: Qb7, Qa7 and Qh8 all mate.
@@ -99,60 +99,60 @@
     BACK_RANK←'4r1k1/n7/8/8/8/8/5PPP/R5K1 w - - 0 1'
 
     test_depth_zero_scores_a_quiet_position_by_material←{
-        100 #.Assert.eq ⍺ score 0 'k7/8/8/8/8/8/P7/K7 w - - 0 1'
+        100 #.Tests.Framework.Assert.eq ⍺ score 0 'k7/8/8/8/8/8/P7/K7 w - - 0 1'
     }
 
     test_depth_zero_recognises_checkmate←{
         ⍝ The side to move is in check, so the search does not stop at
         ⍝ depth zero and finds that there are no legal moves.
-        (-#.Search.MATE)#.Assert.eq ⍺ score 0 'k7/1Q6/1K6/8/8/8/8/8 b - - 0 1'
+        (-#.DeepOrange.Search.MATE)#.Tests.Framework.Assert.eq ⍺ score 0 'k7/1Q6/1K6/8/8/8/8/8 b - - 0 1'
     }
 
     test_scores_a_checkmated_position_as_lost←{
-        (-#.Search.MATE)#.Assert.eq ⍺ score 2 'k7/1Q6/1K6/8/8/8/8/8 b - - 0 1'
+        (-#.DeepOrange.Search.MATE)#.Tests.Framework.Assert.eq ⍺ score 2 'k7/1Q6/1K6/8/8/8/8/8 b - - 0 1'
     }
 
     test_scores_a_stalemated_position_as_a_draw←{
-        0 #.Assert.eq ⍺ score 1 'k7/8/1Q6/8/8/8/8/7K b - - 0 1'
+        0 #.Tests.Framework.Assert.eq ⍺ score 1 'k7/8/1Q6/8/8/8/8/7K b - - 0 1'
     }
 
     test_scores_mate_in_one←{
-        (#.Search.MATE-1)#.Assert.eq ⍺ score 1 MATE_IN_ONE
+        (#.DeepOrange.Search.MATE-1)#.Tests.Framework.Assert.eq ⍺ score 1 MATE_IN_ONE
     }
 
     test_prefers_the_fastest_mate←{
         ⍝ A deeper search also finds slower mates; the score is still
         ⍝ that of the mate in one.
-        (#.Search.MATE-1)#.Assert.eq ⍺ score 3 MATE_IN_ONE
+        (#.DeepOrange.Search.MATE-1)#.Tests.Framework.Assert.eq ⍺ score 3 MATE_IN_ONE
     }
 
     test_scores_a_won_piece←{
         ⍝ exd5 wins the queen; the remaining material is one white pawn.
-        100 #.Assert.eq ⍺ score 2 'k7/8/8/3q4/4P3/8/8/K7 w - - 0 1'
+        100 #.Tests.Framework.Assert.eq ⍺ score 2 'k7/8/8/3q4/4P3/8/8/K7 w - - 0 1'
     }
 
     test_best_move_plays_mate_in_one←{
         move←⍺ best 2 MATE_IN_ONE
-        #.Assert.ok ⍺ isCheckmate(position MATE_IN_ONE)#.MoveGeneration.makeMove move
+        #.Tests.Framework.Assert.ok ⍺ isCheckmate(position MATE_IN_ONE)#.DeepOrange.MoveGeneration.makeMove move
     }
 
     test_best_move_takes_a_free_queen←{
-        ((#.Helpers.sqs'e4 d5'),0)#.Assert.eq ⍺ best 2 'k7/8/8/3q4/4P3/8/8/K7 w - - 0 1'
+        ((#.Tests.Helpers.sqs'e4 d5'),0)#.Tests.Framework.Assert.eq ⍺ best 2 'k7/8/8/3q4/4P3/8/8/K7 w - - 0 1'
     }
 
     test_best_move_avoids_allowing_mate_in_one←{
         ⍝ Taking the knight scores best by material, but only checks at
         ⍝ the horizon reveal that it allows mate.
         move←⍺ best 2 BACK_RANK
-        #.Assert.ok~⍺ hasMateInOne(position BACK_RANK)#.MoveGeneration.makeMove move
+        #.Tests.Framework.Assert.ok~⍺ hasMateInOne(position BACK_RANK)#.DeepOrange.MoveGeneration.makeMove move
     }
 
     test_best_move_returns_an_empty_vector_when_checkmated←{
-        ⍬ #.Assert.eq ⍺ best 2 'k7/1Q6/1K6/8/8/8/8/8 b - - 0 1'
+        ⍬ #.Tests.Framework.Assert.eq ⍺ best 2 'k7/1Q6/1K6/8/8/8/8/8 b - - 0 1'
     }
 
     test_best_move_returns_an_empty_vector_when_stalemated←{
-        ⍬ #.Assert.eq ⍺ best 2 'k7/8/1Q6/8/8/8/8/7K b - - 0 1'
+        ⍬ #.Tests.Framework.Assert.eq ⍺ best 2 'k7/8/1Q6/8/8/8/8/7K b - - 0 1'
     }
 
 :EndNamespace

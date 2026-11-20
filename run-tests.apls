@@ -1,0 +1,71 @@
+⍝ Runs every test suite: the chess suites in APLSource/Tests/*Tests.apln
+⍝ and the test framework's own suites in
+⍝ APLSource/Tests/Framework/*Tests.apln.
+⍝
+⍝ Usage: dyalogscript run-tests.apls
+⍝
+⍝ Exits with code 1 if a file fails to load, or any test fails or errors.
+⍝
+⍝ Files are fixed into the namespaces Link creates when APLSource is
+⍝ linked into #: #.DeepOrange, #.Tests and #.Tests.Framework.
+
+⎕IO ⎕ML←1
+
+findFiles←{{⍵[⍋⍵]}⊆⊃0(⎕NINFO⍠1)⍵}
+
+SOURCE_TYPES←'.apln' '.aplc' '.apli' '.aplf' '.aplo'
+isSourceFile←{(⊂3⊃1 ⎕NPARTS ⍵)∊SOURCE_TYPES}
+
+fail←{⍬⊣⍞←'LOAD  ',⍺,': ',⍵,⎕UCS 10}
+
+loadFile←{
+    ⍝ ⍺ ←→ target namespace
+    ⍝ ⍵ ←→ path of a file defining a single namespace
+    ⍝ ← ←→ reference to the namespace, or ⍬ when the file fails to load
+    0::⍵ fail⊃⎕DMX.DM
+    ⍺.⎕FIX'file://',⍵
+}
+
+args←2 ⎕NQ'.' 'GetCommandLineArgs'
+source_dir←(⊃1 ⎕NPARTS⊃args),'APLSource/'
+engine_dir←source_dir,'DeepOrange/'
+test_dir←source_dir,'Tests/'
+framework_dir←test_dir,'Framework/'
+
+'DeepOrange' 'Tests'⎕NS¨⊂⍬
+'Tests.Framework'⎕NS⍬
+
+⍝ Suites are loaded before everything else, so a suite that uses another
+⍝ namespace while it is being fixed fails here, whatever order Link or
+⍝ a session would load the files in. Such an error is reported but
+⍝ leaves the suite incomplete, so its tests then fail.
+⍝ The suites are fixed in a :Trap at script level: an error in a
+⍝ multi-line dfn called during the fix escapes a dfn error guard and
+⍝ leaves the script running inside the suite.
+suites←⍬
+chess_suites←findFiles test_dir,'*Tests.apln'
+framework_suites←findFiles framework_dir,'*Tests.apln'
+suite_paths←chess_suites,framework_suites
+suite_targets←((≢chess_suites)⍴Tests),(≢framework_suites)⍴Tests.Framework
+:For path target :InEach suite_paths suite_targets
+    :Trap 0
+        suites,←target.⎕FIX'file://',path
+    :Else
+        _←path fail⊃⎕DMX.DM
+        suites,←⊂⍬
+    :EndTrap
+:EndFor
+
+paths←findFiles engine_dir,'*'
+sources←DeepOrange loadFile¨(isSourceFile¨paths)/paths
+support←Tests.Framework loadFile¨framework_dir∘,¨'Tester.apln' 'Assert.apln'
+support,←Tests loadFile¨⊂test_dir,'Helpers.apln'
+failed←∨/0=≢¨sources,support,suites
+
+:if ~failed
+    suites←(0≠≢¨suites)/suites
+    results←Tests.Framework.Tester.run suites
+    failed∨←Tests.Framework.Tester.failed results
+:endIf
+
+⎕OFF(failed)

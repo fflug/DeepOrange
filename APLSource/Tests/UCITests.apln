@@ -1,7 +1,7 @@
 :Namespace UCITests
     ⎕IO ⎕ML←1
 
-    setup←{#.LookupTables.createLookupTables ⍬}
+    setup←{#.DeepOrange.LookupTables.createLookupTables ⍬}
 
     ⍝ A move is (from to promotion), as produced by MoveGeneration.
     ⍝ UCI long algebraic notation names the from and to squares, plus a
@@ -13,7 +13,7 @@
         ⍝ ⍵ ←→ 'from to', promotion as a FEN piece letter ('' for none)
         ⍝ ← ←→ move (from to promotion)
         (squares promotion)←⍵
-        (#.Helpers.sqs squares),pieceCode promotion
+        (#.Tests.Helpers.sqs squares),pieceCode promotion
     }
 
     pieceCode←{
@@ -21,7 +21,7 @@
         ⍝ ⍵ ←→ FEN piece letter, or '' for none
         ⍝ ← ←→ piece code; 0 for none
         0=≢⍵:0
-        #.Pieces ⎕VGET ⍵
+        #.DeepOrange.Pieces ⎕VGET ⍵
     }
 
     ⍝ Each case: side to move (0 white, 1 black), squares, promotion
@@ -49,13 +49,13 @@
     test_writes_a_move_in_uci_notation_cases←CASES
     test_writes_a_move_in_uci_notation←{
         (side squares promotion uci)←⍵
-        uci #.Assert.eq #.UCI.moveToUCI move squares promotion
+        uci #.Tests.Framework.Assert.eq #.DeepOrange.UCI.moveToUCI move squares promotion
     }
 
     test_reads_a_move_from_uci_notation_cases←CASES
     test_reads_a_move_from_uci_notation←{
         (side squares promotion uci)←⍵
-        (move squares promotion)#.Assert.eq side #.UCI.uciToMove uci
+        (move squares promotion)#.Tests.Framework.Assert.eq side #.DeepOrange.UCI.uciToMove uci
     }
 
     ⍝ Start position, for the case tables below. Case tables are built
@@ -80,7 +80,7 @@
     )
     test_applies_moves_to_a_position←{
         (start moves expected)←⍵
-        (#.Board.initFromFEN expected)#.Assert.eq(#.Board.initFromFEN start)#.UCI.applyMoves moves
+        (#.DeepOrange.Board.initFromFEN expected)#.Tests.Framework.Assert.eq(#.DeepOrange.Board.initFromFEN start)#.DeepOrange.UCI.applyMoves moves
     }
 
     ⍝ handlePositionCmd
@@ -105,7 +105,7 @@
     )
     test_handles_position_arguments←{
         (args expected)←⍵
-        (#.Board.initFromFEN expected)#.Assert.eq #.UCI.handlePositionCmd words args
+        (#.DeepOrange.Board.initFromFEN expected)#.Tests.Framework.Assert.eq #.DeepOrange.UCI.handlePositionCmd words args
     }
 
     ⍝ handle
@@ -117,14 +117,14 @@
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ input line, or a vector of them in the order sent
         ⍝ ← ←→ state after the last line, replies to the last line
-        ⊃step/(⌽,⊆⍵),⊂(#.UCI.newState ⍺)⍬
+        ⊃step/(⌽,⊆⍵),⊂(#.DeepOrange.UCI.newState ⍺)⍬
     }
 
     step←{
         ⍝ ⍺ ←→ input line
         ⍝ ⍵ ←→ state, replies to the previous line
         ⍝ ← ←→ state, replies to this line
-        (⊃⍵)#.UCI.handle ⍺
+        (⊃⍵)#.DeepOrange.UCI.handle ⍺
     }
 
     replies←{
@@ -137,9 +137,9 @@
     bestmove←{
         ⍝ ⍵ ←→ replies to go
         ⍝ ← ←→ move named by the single bestmove reply
-        1≠≢⍵:#.Assert.fail'expected one reply but got ',⍕≢⍵
+        1≠≢⍵:#.Tests.Framework.Assert.fail'expected one reply but got ',⍕≢⍵
         reply←⊃⍵
-        ~'bestmove '≡9↑reply:#.Assert.fail'expected bestmove but got ',reply
+        ~'bestmove '≡9↑reply:#.Tests.Framework.Assert.fail'expected bestmove but got ',reply
         9↓reply
     }
 
@@ -147,94 +147,94 @@
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ FEN, UCI move
         (fen uci)←⍵
-        position←#.Board.initFromFEN fen
-        side←(2⊃position)[#.GameState.side]
-        (⊂side #.UCI.uciToMove uci)∊↓⍺ #.MoveGeneration.generateLegalMoves position
+        position←#.DeepOrange.Board.initFromFEN fen
+        side←(2⊃position)[#.DeepOrange.GameState.side]
+        (⊂side #.DeepOrange.UCI.uciToMove uci)∊↓⍺ #.DeepOrange.MoveGeneration.generateLegalMoves position
     }
 
     ⍝ A position where the side to move has exactly one legal move, a8a7.
     ONE_MOVE←'k7/8/8/8/8/8/8/1R5K b - - 0 1'
 
     test_uci_identifies_the_engine_by_name←{
-        #.Assert.ok'id name '≡8↑⊃⍺ replies'uci'
+        #.Tests.Framework.Assert.ok'id name '≡8↑⊃⍺ replies'uci'
     }
 
     test_uci_identifies_the_author←{
-        #.Assert.ok'id author '≡10↑2⊃⍺ replies'uci'
+        #.Tests.Framework.Assert.ok'id author '≡10↑2⊃⍺ replies'uci'
     }
 
     test_uci_ends_with_uciok←{
-        'uciok'#.Assert.eq⊃⌽⍺ replies'uci'
+        'uciok'#.Tests.Framework.Assert.eq⊃⌽⍺ replies'uci'
     }
 
     test_isready_replies_readyok←{
-        (,⊂'readyok')#.Assert.eq ⍺ replies'isready'
+        (,⊂'readyok')#.Tests.Framework.Assert.eq ⍺ replies'isready'
     }
 
     test_go_replies_with_a_legal_move_from_the_start_position←{
-        #.Assert.ok ⍺ isLegal #.Helpers.START(bestmove ⍺ replies'go')
+        #.Tests.Framework.Assert.ok ⍺ isLegal #.Tests.Helpers.START(bestmove ⍺ replies'go')
     }
 
     test_go_ignores_search_parameters←{
-        #.Assert.ok ⍺ isLegal #.Helpers.START(bestmove ⍺ replies'go wtime 60000 btime 60000 winc 0 binc 0')
+        #.Tests.Framework.Assert.ok ⍺ isLegal #.Tests.Helpers.START(bestmove ⍺ replies'go wtime 60000 btime 60000 winc 0 binc 0')
     }
 
     test_position_has_no_reply←{
-        0 #.Assert.eq≢⍺ replies'position startpos moves e2e4'
+        0 #.Tests.Framework.Assert.eq≢⍺ replies'position startpos moves e2e4'
     }
 
     test_go_plays_from_a_position_given_by_fen←{
-        'a8a7'#.Assert.eq bestmove ⍺ replies('position fen ',ONE_MOVE)'go'
+        'a8a7'#.Tests.Framework.Assert.eq bestmove ⍺ replies('position fen ',ONE_MOVE)'go'
     }
 
     test_go_plays_from_a_position_after_its_moves←{
         ⍝ After b2b1 the black king on a8 has only a7.
         lines←'position fen k7/8/8/8/8/8/1R6/7K w - - 0 1 moves b2b1' 'go'
-        'a8a7'#.Assert.eq bestmove ⍺ replies lines
+        'a8a7'#.Tests.Framework.Assert.eq bestmove ⍺ replies lines
     }
 
     test_go_replies_with_the_null_move_when_checkmated←{
         lines←'position fen k7/1Q6/1K6/8/8/8/8/8 b - - 0 1' 'go'
-        '0000'#.Assert.eq bestmove ⍺ replies lines
+        '0000'#.Tests.Framework.Assert.eq bestmove ⍺ replies lines
     }
 
     test_ucinewgame_resets_to_the_start_position←{
         lines←('position fen ',ONE_MOVE)'ucinewgame' 'go'
-        #.Assert.ok ⍺ isLegal #.Helpers.START(bestmove ⍺ replies lines)
+        #.Tests.Framework.Assert.ok ⍺ isLegal #.Tests.Helpers.START(bestmove ⍺ replies lines)
     }
 
     test_ucinewgame_has_no_reply←{
-        0 #.Assert.eq≢⍺ replies'ucinewgame'
+        0 #.Tests.Framework.Assert.eq≢⍺ replies'ucinewgame'
     }
 
     test_ignores_extra_whitespace_between_tokens←{
         lines←('  position   fen  ',ONE_MOVE,'  ')'  go  '
-        'a8a7'#.Assert.eq bestmove ⍺ replies lines
+        'a8a7'#.Tests.Framework.Assert.eq bestmove ⍺ replies lines
     }
 
     test_ignores_an_unknown_command←{
         lines←('position fen ',ONE_MOVE)'xyzzy 42' 'go'
-        'a8a7'#.Assert.eq bestmove ⍺ replies lines
+        'a8a7'#.Tests.Framework.Assert.eq bestmove ⍺ replies lines
     }
 
     test_unknown_command_has_no_reply←{
-        0 #.Assert.eq≢⍺ replies'xyzzy 42'
+        0 #.Tests.Framework.Assert.eq≢⍺ replies'xyzzy 42'
     }
 
     test_ignores_an_empty_line←{
-        0 #.Assert.eq≢⍺ replies''
+        0 #.Tests.Framework.Assert.eq≢⍺ replies''
     }
 
     test_new_state_is_not_finished←{
-        0 #.Assert.eq #.UCI.finished #.UCI.newState ⍺
+        0 #.Tests.Framework.Assert.eq #.DeepOrange.UCI.finished #.DeepOrange.UCI.newState ⍺
     }
 
     test_quit_finishes_the_session←{
-        1 #.Assert.eq #.UCI.finished⊃⍺ session'quit'
+        1 #.Tests.Framework.Assert.eq #.DeepOrange.UCI.finished⊃⍺ session'quit'
     }
 
     test_other_commands_do_not_finish_the_session←{
-        0 #.Assert.eq #.UCI.finished⊃⍺ session'isready'
+        0 #.Tests.Framework.Assert.eq #.DeepOrange.UCI.finished⊃⍺ session'isready'
     }
 
 :EndNamespace

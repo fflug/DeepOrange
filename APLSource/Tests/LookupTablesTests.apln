@@ -1,7 +1,7 @@
 :Namespace LookupTablesTests
     ⎕IO ⎕ML←1
 
-    setup←{#.LookupTables.createLookupTables ⍬}
+    setup←{#.DeepOrange.LookupTables.createLookupTables ⍬}
 
     ⍝ Ray directions, as indices into the first axis of the rays table.
     (NORTH SOUTH EAST WEST NORTHEAST NORTHWEST SOUTHEAST SOUTHWEST)←⍳8
@@ -10,45 +10,45 @@
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ direction, square name
         (direction square)←⍵
-        ⊃⍺.rays[direction;#.Helpers.sq square]
+        ⊃⍺.rays[direction;#.Tests.Helpers.sq square]
     }
 
     ⍝ Knight
 
     test_knight_in_the_corner_reaches_two_squares←{
-        (#.Helpers.sqs'c2 b3')#.Assert.eq ⍸⍺.knight[#.Helpers.sq'a1';]
+        (#.Tests.Helpers.sqs'c2 b3')#.Tests.Framework.Assert.eq ⍸⍺.knight[#.Tests.Helpers.sq'a1';]
     }
 
     test_knight_in_the_centre_reaches_eight_squares←{
-        (#.Helpers.sqs'c2 e2 b3 f3 b5 f5 c6 e6')#.Assert.eq ⍸⍺.knight[#.Helpers.sq'd4';]
+        (#.Tests.Helpers.sqs'c2 e2 b3 f3 b5 f5 c6 e6')#.Tests.Framework.Assert.eq ⍸⍺.knight[#.Tests.Helpers.sq'd4';]
     }
 
     ⍝ King
 
     test_king_in_the_corner_reaches_three_squares←{
-        (#.Helpers.sqs'b1 a2 b2')#.Assert.eq ⍸⍺.king[#.Helpers.sq'a1';]
+        (#.Tests.Helpers.sqs'b1 a2 b2')#.Tests.Framework.Assert.eq ⍸⍺.king[#.Tests.Helpers.sq'a1';]
     }
 
     test_king_in_the_centre_reaches_eight_squares←{
-        (#.Helpers.sqs'd3 e3 f3 d4 f4 d5 e5 f5')#.Assert.eq ⍸⍺.king[#.Helpers.sq'e4';]
+        (#.Tests.Helpers.sqs'd3 e3 f3 d4 f4 d5 e5 f5')#.Tests.Framework.Assert.eq ⍸⍺.king[#.Tests.Helpers.sq'e4';]
     }
 
     ⍝ Pawn captures: first axis is 1 for white, 2 for black.
 
     test_white_pawn_attacks_both_forward_diagonals←{
-        (#.Helpers.sqs'd3 f3')#.Assert.eq ⍸⍺.pawn[1;#.Helpers.sq'e2';]
+        (#.Tests.Helpers.sqs'd3 f3')#.Tests.Framework.Assert.eq ⍸⍺.pawn[1;#.Tests.Helpers.sq'e2';]
     }
 
     test_white_pawn_on_the_a_file_attacks_one_square←{
-        (,#.Helpers.sq'b3')#.Assert.eq ⍸⍺.pawn[1;#.Helpers.sq'a2';]
+        (,#.Tests.Helpers.sq'b3')#.Tests.Framework.Assert.eq ⍸⍺.pawn[1;#.Tests.Helpers.sq'a2';]
     }
 
     test_black_pawn_attacks_both_forward_diagonals←{
-        (#.Helpers.sqs'd6 f6')#.Assert.eq ⍸⍺.pawn[2;#.Helpers.sq'e7';]
+        (#.Tests.Helpers.sqs'd6 f6')#.Tests.Framework.Assert.eq ⍸⍺.pawn[2;#.Tests.Helpers.sq'e7';]
     }
 
     test_black_pawn_on_the_h_file_attacks_one_square←{
-        (,#.Helpers.sq'g6')#.Assert.eq ⍸⍺.pawn[2;#.Helpers.sq'h7';]
+        (,#.Tests.Helpers.sq'g6')#.Tests.Framework.Assert.eq ⍸⍺.pawn[2;#.Tests.Helpers.sq'h7';]
     }
 
     ⍝ Rays: ordered from the nearest square outwards.
@@ -65,11 +65,11 @@
     )
     test_rays←{
         (direction square expected)←⍵
-        (#.Helpers.sqs expected)#.Assert.eq ⍺ ray direction square
+        (#.Tests.Helpers.sqs expected)#.Tests.Framework.Assert.eq ⍺ ray direction square
     }
 
     test_ray_off_the_board_is_empty←{
-        ⍬ #.Assert.eq ⍺ ray NORTH'a8'
+        ⍬ #.Tests.Framework.Assert.eq ⍺ ray NORTH'a8'
     }
 
 :EndNamespace
