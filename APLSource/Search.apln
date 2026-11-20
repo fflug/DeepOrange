@@ -3,6 +3,47 @@
 
     ⎕IO ⎕ML←1
 
+    ⍝ Score of a side that is checkmated at the root. It exceeds any
+    ⍝ material score, so no material balance outweighs a mate.
+    MATE←100000
+
+    negamax←{
+        ⍝ Score of a position by negamax search to a fixed depth.
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ depth, bitboards, game state[, ply]; ply defaults to 0
+        ⍝ ← ←→ score in centipawns from the side to move's point of view;
+        ⍝      a side checkmated ply half-moves from the root scores
+        ⍝      ply-MATE, so faster mates score higher for the winner
+
+        lookups←⍺
+        (depth bitboards game_state ply)←4↑⍵,0
+
+        side←game_state[##.GameState.side]
+        in_check←lookups ##.MoveGeneration.isKingInCheck bitboards side
+
+         ⍝ Check extension: the search continues past the horizon while in
+        ⍝ check, so a mate there is still found.
+        (depth≤0)∧~in_check:##.Evaluation.evaluate bitboards game_state
+
+        moves←lookups ##.MoveGeneration.generateLegalMoves bitboards game_state
+        side←game_state[##.GameState.side]
+        ⍝ If there are no legal moves, it is either stalemate (evaluation 0)
+        ⍝ or checkmate (evaluation ply-MATE).
+        0=≢moves:in_check×ply-MATE
+
+        ⍝ Each child's score is from the opponent's point of view, so it is
+        ⍝ negated before taking the maximum.
+        ⌈/-lookups{⍺ negamax (depth-1),(bitboards game_state ##.MoveGeneration.makeMove ⍵),ply+1}⍤1⊢moves
+    }
+
+    bestMove←{
+        ⍝ Move with the highest negamax score.
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ depth, bitboards, game state
+        ⍝ ← ←→ move (from to promotion); ⍬ when there is no legal move
+
+    }
+
     randomMove←{
         ⍝ Uniformly random legal move.
         ⍝ ⍺ ←→ lookup tables
