@@ -10,52 +10,66 @@
     ⍝ colour, so converting from UCI needs the side to move.
 
     move←{
-        ⍝ ⍵ ←→ 'from to', promotion (0 for none)
+        ⍝ ⍵ ←→ 'from to', promotion as a FEN piece letter ('' for none)
         ⍝ ← ←→ move (from to promotion)
         (squares promotion)←⍵
-        (#.Helpers.sqs squares),promotion
+        (#.Helpers.sqs squares),pieceCode promotion
     }
 
-    ⍝ Each case: side to move (0 white, 1 black), move, UCI string.
+    pieceCode←{
+        ⍝ Pieces names each piece by its FEN letter.
+        ⍝ ⍵ ←→ FEN piece letter, or '' for none
+        ⍝ ← ←→ piece code; 0 for none
+        0=≢⍵:0
+        #.Pieces ⎕VGET ⍵
+    }
+
+    ⍝ Each case: side to move (0 white, 1 black), squares, promotion
+    ⍝ letter, UCI string. Cases hold plain data so the suite can be
+    ⍝ loaded before the namespaces under test.
     CASES←(
-        ('quiet pawn push'(0(move'e2 e4' 0)'e2e4'))
-        ('quiet knight move'(1(move'g8 f6' 0)'g8f6'))
-        ('capture'(0(move'e4 d5' 0)'e4d5'))
-        ('en passant capture'(0(move'e5 d6' 0)'e5d6'))
-        ('white kingside castling'(0(move'e1 g1' 0)'e1g1'))
-        ('white queenside castling'(0(move'e1 c1' 0)'e1c1'))
-        ('black kingside castling'(1(move'e8 g8' 0)'e8g8'))
-        ('black queenside castling'(1(move'e8 c8' 0)'e8c8'))
-        ('white promotion to queen'(0(move'e7 e8'#.Pieces.Q)'e7e8q'))
-        ('white promotion to rook'(0(move'e7 e8'#.Pieces.R)'e7e8r'))
-        ('white promotion to bishop'(0(move'e7 e8'#.Pieces.B)'e7e8b'))
-        ('white promotion to knight'(0(move'e7 e8'#.Pieces.N)'e7e8n'))
-        ('black promotion to queen'(1(move'd2 d1'#.Pieces.q)'d2d1q'))
-        ('black promotion to knight'(1(move'd2 d1'#.Pieces.n)'d2d1n'))
-        ('promotion with capture'(0(move'g7 h8'#.Pieces.Q)'g7h8q'))
-        ('corner squares'(0(move'a1 h8' 0)'a1h8'))
+        ('quiet pawn push'(0 'e2 e4' '' 'e2e4'))
+        ('quiet knight move'(1 'g8 f6' '' 'g8f6'))
+        ('capture'(0 'e4 d5' '' 'e4d5'))
+        ('en passant capture'(0 'e5 d6' '' 'e5d6'))
+        ('white kingside castling'(0 'e1 g1' '' 'e1g1'))
+        ('white queenside castling'(0 'e1 c1' '' 'e1c1'))
+        ('black kingside castling'(1 'e8 g8' '' 'e8g8'))
+        ('black queenside castling'(1 'e8 c8' '' 'e8c8'))
+        ('white promotion to queen'(0 'e7 e8' 'Q' 'e7e8q'))
+        ('white promotion to rook'(0 'e7 e8' 'R' 'e7e8r'))
+        ('white promotion to bishop'(0 'e7 e8' 'B' 'e7e8b'))
+        ('white promotion to knight'(0 'e7 e8' 'N' 'e7e8n'))
+        ('black promotion to queen'(1 'd2 d1' 'q' 'd2d1q'))
+        ('black promotion to knight'(1 'd2 d1' 'n' 'd2d1n'))
+        ('promotion with capture'(0 'g7 h8' 'Q' 'g7h8q'))
+        ('corner squares'(0 'a1 h8' '' 'a1h8'))
     )
 
     test_writes_a_move_in_uci_notation_cases←CASES
     test_writes_a_move_in_uci_notation←{
-        (side mv uci)←⍵
-        uci #.Assert.eq #.UCI.moveToUCI mv
+        (side squares promotion uci)←⍵
+        uci #.Assert.eq #.UCI.moveToUCI move squares promotion
     }
 
     test_reads_a_move_from_uci_notation_cases←CASES
     test_reads_a_move_from_uci_notation←{
-        (side mv uci)←⍵
-        mv #.Assert.eq side #.UCI.uciToMove uci
+        (side squares promotion uci)←⍵
+        (move squares promotion)#.Assert.eq side #.UCI.uciToMove uci
     }
+
+    ⍝ Start position, for the case tables below. Case tables are built
+    ⍝ when the suite is loaded, when Helpers may not exist yet.
+    START←'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
     ⍝ applyMoves
 
     ⍝ Each case: start FEN, moves, FEN of the expected position.
     test_applies_moves_to_a_position_cases←(
-        ('no moves'(#.Helpers.START(0⍴⊂'')#.Helpers.START))
-        ('single move as a plain string'(#.Helpers.START'e2e4' 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
-        ('single move as a one-item vector'(#.Helpers.START(,⊂'e2e4')'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
-        ('moves in the order played'(#.Helpers.START('e2e4' 'e7e5' 'g1f3')'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2'))
+        ('no moves'(START(0⍴⊂'')START))
+        ('single move as a plain string'(START'e2e4' 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
+        ('single move as a one-item vector'(START(,⊂'e2e4')'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
+        ('moves in the order played'(START('e2e4' 'e7e5' 'g1f3')'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2'))
         ('capture'('rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2' 'e4d5' 'rnbqkbnr/ppp1pppp/8/3P4/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2'))
         ('en passant capture'('k7/8/8/3pP3/8/8/8/K7 w - d6 0 1' 'e5d6' 'k7/8/3P4/8/8/8/8/K7 b - - 0 1'))
         ('white kingside castling'('r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1' 'e1g1' 'r3k2r/8/8/8/8/8/8/R4RK1 b kq - 1 1'))
@@ -80,10 +94,10 @@
     ⍝ Each case: arguments of the position command, FEN of the expected
     ⍝ position.
     test_handles_position_arguments_cases←(
-        ('start position'('startpos' #.Helpers.START))
+        ('start position'('startpos' START))
         ('start position with moves'('startpos moves e2e4 e7e5 g1f3' 'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2'))
         ('start position with a single move'('startpos moves e2e4' 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
-        ('start position with an empty move list'('startpos moves' #.Helpers.START))
+        ('start position with an empty move list'('startpos moves' START))
         ('fen'('fen r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 3 17' 'r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 3 17'))
         ('fen with moves'('fen r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1 moves e1g1 e8c8' '2kr3r/8/8/8/8/8/8/R4RK1 w - - 2 2'))
         ('fen with a black promotion'('fen k7/8/8/8/8/8/3p4/K7 b - - 0 1 moves d2d1q' 'k7/8/8/8/8/8/8/K2q4 w - - 0 2'))
