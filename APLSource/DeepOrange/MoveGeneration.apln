@@ -227,11 +227,11 @@
         ⍝ in check must capture the checking piece or block its line.
         ⍝ An en passant capture takes a pawn that is not on its
         ⍝ destination square, so it evades a check by that pawn.
-        allowed←lookups findPinLines bitboards king side
+        unpinned←lookups staysOnPinLines bitboards king side moves
         evasion←lookups findEvasionSquares king(lookups findCheckers bitboards king side)
         en_passant←(to=game_state[##.GameState.en_passant_square])∧bitboards[offset+##.Pieces.P;from]
         captured←to-en_passant×8-16×side
-        legal←(,allowed)[to+64×from-1]∧evasion[to]∨en_passant∧evasion[captured]
+        legal←unpinned∧evasion[to]∨en_passant∧evasion[captured]
 
         ⍝ The king may not move onto an attacked square. It is lifted off
         ⍝ the board first, so that it does not block a checking line
@@ -277,13 +277,14 @@
         (⍳64)∊checker,line
     }
 
-    findPinLines←{
+    staysOnPinLines←{
         ⍝ ⍺ ←→ lookup tables
-        ⍝ ⍵ ←→ bitboards, king square, side of the king (0 white, 1 black)
-        ⍝ ← ←→ 64×64 Boolean matrix; [f;t] is 0 when moving the piece
-        ⍝      on f to t breaks a pin on the king
+        ⍝ ⍵ ←→ bitboards, king square, side of the king (0 white, 1 black),
+        ⍝      moves (from to promotion)
+        ⍝ ← ←→ Boolean vector, one item per move; 0 when the move takes a
+        ⍝      pinned piece off its pin line
 
-        (bitboards king side)←⍵
+        (bitboards king side moves)←⍵
 
         own←∨⌿bitboards[(6×side)+⍳6;]
         occupied←∨⌿bitboards
@@ -297,15 +298,14 @@
         ⍝ A piece is pinned when it is the first piece on a ray from the
         ⍝ king, is of the king's side, and the second piece is an enemy
         ⍝ pinner for that ray's direction.
-        
         (first second)←↓⍉↑rays{2↑⍵[⍺]/⍺}¨⊂occupied
         pinned←(0,own)[1+first]∧(0,pinners)[(1+diagonal),¨1+second]
 
-        ⍝ A pinned piece may move along its ray up to and including the pinner.
-        lines←pinned/rays{⍺↑⍨⍺⍳⍵}¨second
-        allowed←64 64⍴1
-        allowed[pinned/first;]←⍉(⍳64)∘.∊lines
-        allowed
+        ⍝ A pinned piece may move along its ray up to and including the
+        ⍝ pinner. The final line, every square, serves unpinned pieces,
+        ⍝ whose from square is not found among the pinned ones.
+        lines←(pinned/rays{⍺↑⍨⍺⍳⍵}¨second),⊂⍳64
+        moves[;2]∊¨lines[(pinned/first)⍳moves[;1]]
     }
 
     enPassantExposesKing←{
