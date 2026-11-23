@@ -119,6 +119,15 @@
         ⍝ ⍵ ←→ bitboards, squares, attacking side (0 white, 1 black)
         ⍝ ← ←→ Boolean vector, one item per square; 1 if any piece of
         ⍝      the attacking side attacks that square
+        ∨/⍺ findAttackers ⍵
+    }
+
+    findAttackers←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ bitboards, squares, attacking side (0 white, 1 black)
+        ⍝ ← ←→ Boolean matrix, one row per square, one column per board
+        ⍝      square; 1 where a piece of the attacking side attacks the
+        ⍝      square of that row
 
         (bitboards squares side)←⍵
         squares←,squares
@@ -136,7 +145,7 @@
         ⍝ Pawns are the exception, as they attack forward only; the
         ⍝ defending side's pawn table gives the reverse direction.
         hits∨←⍺.pawn[2-side;squares;]∧⍤1⊢attacker[##.Pieces.P;]
-        ∨/hits
+        hits
     }
 
     perft←{
@@ -207,16 +216,112 @@
         lookups←⍺
         (bitboards game_state)←⍵
 
-        pseudo_legal_moves←lookups generatePseudoLegalMoves bitboards game_state
+        moves←lookups generatePseudoLegalMoves bitboards game_state
+        side←game_state[##.GameState.side]
+        offset←6×side
+        king←⊃⍸bitboards[offset+##.Pieces.K;]
+        from←moves[;1]
+        to←moves[;2]
+
+        ⍝ Any other piece must stay on its pin line, if pinned, and while
+        ⍝ in check must capture the checking piece or block its line.
+        ⍝ An en passant capture takes a pawn that is not on its
+        ⍝ destination square, so it evades a check by that pawn.
+        allowed←lookups findPinLines bitboards king side
+        evasion←lookups findEvasionSquares king(lookups findCheckers bitboards king side)
+        en_passant←(to=game_state[##.GameState.en_passant_square])∧bitboards[offset+##.Pieces.P;from]
+        captured←to-en_passant×8-16×side
+        legal←(,allowed)[to+64×from-1]∧evasion[to]∨en_passant∧evasion[captured]
+
+        ⍝ The king may not move onto an attacked square. It is lifted off
+        ⍝ the board first, so that it does not block a checking line
+        ⍝ along which it retreats.
+        king_moves←from=king
+        board←bitboards
+        board[offset+##.Pieces.K;king]←0
+        legal[⍸king_moves]←~lookups checkSquareAttacked board(king_moves/to)(~side)
+
+        ⍝ En passant removes two pawns from one rank, which can expose
+        ⍝ the king along that rank although neither pawn is pinned.
+        exposed←{lookups enPassantExposesKing bitboards king side ⍵}⍤1⊢en_passant⌿moves[;1 2]
+        legal[⍸en_passant]∧←~exposed
+        legal⌿moves
+    }
+
+    findCheckers←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ bitboards, king square, side of the king (0 white, 1 black)
+        ⍝ ← ←→ squares of the enemy pieces that attack the king
+
+        (bitboards king side)←⍵
+        ⍸,⍺ findAttackers bitboards king(~side)
+    }
+
+    findEvasionSquares←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ king square, squares of the pieces giving check
+        ⍝ ← ←→ Boolean vector, one item per square; 1 where a piece other
+        ⍝      than the king may move without leaving the king in check
+
+        (king checkers)←⍵
+        0=≢checkers:64⍴1
+        ⍝ In double check only the king can move.
+        1<≢checkers:64⍴0
+
+        ⍝ A sliding checker lies on a ray from the king; the squares up
+        ⍝ to and including it block or capture. A knight lies on no ray,
+        ⍝ so only its own square remains.
+        checker←⊃checkers
+        rays←⍺.rays[;king]
+        line←∊(checker∊¨rays)/(rays⍳¨checker)↑¨rays
+        (⍳64)∊checker,line
+    }
+
+    findPinLines←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ bitboards, king square, side of the king (0 white, 1 black)
+        ⍝ ← ←→ 64×64 Boolean matrix; [f;t] is 0 when moving the piece
+        ⍝      on f to t breaks a pin on the king
+
+        (bitboards king side)←⍵
+
+        own←∨⌿bitboards[(6×side)+⍳6;]
+        occupied←∨⌿bitboards
+        pinners_orthogonal←∨⌿bitboards[(6×~side)+##.Pieces.(R Q);]
+        pinners_diagonal←∨⌿bitboards[(6×~side)+##.Pieces.(B Q);]
+        rays←⍺.rays[;king]
+        ⍝ Row 1 is indexed by orthogonal rays, row 2 by diagonal ones.
+        diagonal←(⍳≢rays)∊##.LookupTables.DIAGONAL
+        pinners←↑pinners_orthogonal pinners_diagonal
+
+        ⍝ A piece is pinned when it is the first piece on a ray from the
+        ⍝ king, is of the king's side, and the second piece is an enemy
+        ⍝ pinner for that ray's direction.
+        
+        (first second)←↓⍉↑rays{2↑⍵[⍺]/⍺}¨⊂occupied
+        pinned←(0,own)[1+first]∧(0,pinners)[(1+diagonal),¨1+second]
+
+        ⍝ A pinned piece may move along its ray up to and including the pinner.
+        lines←pinned/rays{⍺↑⍨⍺⍳⍵}¨second
+        allowed←64 64⍴1
+        allowed[pinned/first;]←⍉(⍳64)∘.∊lines
+        allowed
+    }
+
+    enPassantExposesKing←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ bitboards, king square, side to move, en passant capture
+        ⍝      (from to)
+        ⍝ ← ←→ 1 if the king is attacked once both pawns have moved
+
+        (bitboards king side move)←⍵
+        (from to)←move
         ⍝ Rank on an empty matrix calls its operand on a prototype move,
         ⍝ whose zeros are not valid squares.
-        0=≢pseudo_legal_moves:0 3⍴0
-
-        ⍝ A move is legal when, after it is made, the moving side's king
-        ⍝ is not attacked.
-        side←game_state[##.GameState.side]
-        illegal←{lookups isKingInCheck(⊃bitboards game_state makeMove ⍵)side}⍤1⊢pseudo_legal_moves
-        (~illegal)⌿pseudo_legal_moves
+        0=from:0
+        bitboards[;from,to-8-16×side]←0
+        bitboards[(6×side)+##.Pieces.P;to]←1
+        ⊃⍺ checkSquareAttacked bitboards king(~side)
     }
 
     isKingInCheck←{
