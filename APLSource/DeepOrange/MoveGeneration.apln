@@ -117,11 +117,16 @@
         ⍝ so that captures are included; own pieces are removed by the caller.
 
         (squares directions occupied)←⍵
-        ⍝ Each on an empty array calls its operand on the prototype, whose
-        ⍝ zeros are not valid squares.
-        0=≢squares:0 64⍴0
-        reach←{⍵/⍨~¯1↓0,∨\occupied[⍵]}¨⍺.rays[directions;squares]
-        ⍉(⍳64)∘.∊,⌿reach
+        ⍝ rays and reach are direction×square×step; the zeros that pad a
+        ⍝ ray index the leading 0 of the occupancy and so read as empty.
+        rays←⍺.rays[directions;squares;]
+        reach←(rays≠0)∧~¯1↓⍤1⊢0,∨\(0,occupied)[1+rays]
+
+        ⍝ Reached squares are set in one row of 65 per from square; the
+        ⍝ leading column absorbs the zeros of unreached and padding steps.
+        attacks←(65×≢squares)⍴0
+        attacks[,1+(reach×rays)+[2]65×¯1+⍳≢squares]←1
+        0 1↓(≢squares)65⍴attacks
     }
 
     checkSquareAttacked←{
@@ -284,9 +289,9 @@
         ⍝ to and including it block or capture. A knight lies on no ray,
         ⍝ so only its own square remains.
         checker←⊃checkers
-        rays←⍺.rays[;king]
-        line←∊(checker∊¨rays)/(rays⍳¨checker)↑¨rays
-        (⍳64)∊checker,line
+        rays←⍺.rays[;king;]
+        line←rays×⌽∨\⌽rays=checker
+        (⍳64)∊checker,,line
     }
 
     staysOnPinLines←{
@@ -301,22 +306,30 @@
 
         pinners_orthogonal←∨⌿bitboards[(6×~side)+##.Pieces.(R Q);]
         pinners_diagonal←∨⌿bitboards[(6×~side)+##.Pieces.(B Q);]
-        rays←⍺.rays[;king]
+        ⍝ rays is direction×step; the zeros that pad a ray index the
+        ⍝ leading 0 of the occupancy and so read as empty.
+        rays←⍺.rays[;king;]
         ⍝ Row 1 is indexed by orthogonal rays, row 2 by diagonal ones.
         diagonal←(⍳≢rays)∊##.LookupTables.DIAGONAL
         pinners←↑pinners_orthogonal pinners_diagonal
 
         ⍝ A piece is pinned when it is the first piece on a ray from the
         ⍝ king, is of the king's side, and the second piece is an enemy
-        ⍝ pinner for that ray's direction.
-        (first second)←↓⍉↑rays{2↑⍵[⍺]/⍺}¨⊂occupied
-        pinned←(0,own)[1+first]∧(0,pinners)[(1+diagonal),¨1+second]
+        ⍝ pinner for that ray's direction. first and second are 0 on a
+        ⍝ ray with fewer pieces.
+        blocked←(0,occupied)[1+rays]
+        count←blocked×+\blocked
+        first←+/rays×count=1
+        second←+/rays×count=2
+        pinned←(0,own)[1+first]∧(,0,pinners)[(65×diagonal)+1+second]
 
         ⍝ A pinned piece may move along its ray up to and including the
         ⍝ pinner. The final line, every square, serves unpinned pieces,
         ⍝ whose from square is not found among the pinned ones.
-        lines←(pinned/rays{⍺↑⍨⍺⍳⍵}¨second),⊂⍳64
-        moves[;2]∊¨lines[(pinned/first)⍳moves[;1]]
+        up_to_pinner←⌽∨\⌽rays=⍤1 0⊢second
+        lines←((⍳64)∊⍤1⊢pinned⌿rays×up_to_pinner)⍪64⍴1
+        line←(pinned/first)⍳moves[;1]
+        (,lines)[moves[;2]+64×line-1]
     }
 
     enPassantExposesKing←{

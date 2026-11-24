@@ -56,10 +56,11 @@
     createRays←{
         ⍝ Rays for sliding pieces.
         ⍝ ⍵ ←→ 64-item vector of (rank file) coordinates
-        ⍝ ← ←→ 8×64 nested matrix, [direction;from] is the vector of squares
-        ⍝      along that direction, nearest first, up to the board edge
+        ⍝ ← ←→ 8×64×7 integer array; [direction;from;] holds the squares
+        ⍝      along that direction, nearest first, up to the board edge,
+        ⍝      padded with zeros to the longest possible ray
 
-        DIRECTIONS∘.ray ⍵
+        ↑DIRECTIONS∘.ray ⍵
     }
 
     ray←{
