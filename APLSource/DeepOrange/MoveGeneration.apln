@@ -64,6 +64,7 @@
 
         ⍝ No pieces between king and rook.
         clear←{~∨/occupied[⍵]}¨between
+        ~∨/rights∧clear:0 3⍴0
 
         ⍝ The king may not castle out of check or across an attacked
         ⍝ square. Whether it lands in check is left to the legality
