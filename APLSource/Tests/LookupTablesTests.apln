@@ -10,7 +10,7 @@
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ direction, square name
         (direction square)←⍵
-        ⊃⍺.rays[direction;#.Tests.Helpers.sq square]
+        0~⍨⍺.rays[direction;#.Tests.Helpers.sq square;]
     }
 
     ⍝ Knight
@@ -51,7 +51,16 @@
         (,#.Tests.Helpers.sq'g6')#.Tests.Framework.Assert.eq ⍸⍺.pawn[2;#.Tests.Helpers.sq'h7';]
     }
 
-    ⍝ Rays: ordered from the nearest square outwards.
+    ⍝ Rays: ordered from the nearest square outwards, padded with zeros
+    ⍝ to the longest possible ray.
+
+    test_rays_form_a_simple_array_of_direction_by_square_by_step←{
+        (8 64 7)#.Tests.Framework.Assert.eq ⍴⍺.rays
+    }
+
+    test_ray_is_padded_with_zeros_beyond_the_board_edge←{
+        ((#.Tests.Helpers.sqs'e3 e2 e1'),0 0 0 0)#.Tests.Framework.Assert.eq ⍺.rays[SOUTH;#.Tests.Helpers.sq'e4';]
+    }
 
     test_rays_cases←(
         ('north from a1'(NORTH'a1' 'a2 a3 a4 a5 a6 a7 a8'))
