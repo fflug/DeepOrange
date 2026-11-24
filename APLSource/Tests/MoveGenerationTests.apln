@@ -9,7 +9,10 @@
     moves←{
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ FEN
-        #.Tests.Helpers.sortRows ⍺ #.DeepOrange.MoveGeneration.generatePseudoLegalMoves #.DeepOrange.Board.initFromFEN ⍵
+        (bitboards game_state)←#.DeepOrange.Board.initFromFEN ⍵
+        side←game_state[#.DeepOrange.GameState.side]
+        occupancy←#.DeepOrange.MoveGeneration.occupancy bitboards side
+        #.Tests.Helpers.sortRows ⍺ #.DeepOrange.MoveGeneration.generatePseudoLegalMoves bitboards game_state occupancy
     }
 
     from←{
