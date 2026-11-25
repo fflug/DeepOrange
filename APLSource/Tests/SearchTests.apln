@@ -57,19 +57,31 @@
 
     position←{#.DeepOrange.Board.initFromFEN ⍵}
 
-    score←{
+    ⍝ negamax returns (score nodes) and bestMove returns (move score
+    ⍝ nodes), where nodes counts the positions searched, the root
+    ⍝ included.
+
+    search←{
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ depth, FEN
+        ⍝ ← ←→ score, nodes
         (depth fen)←⍵
         ⍺ #.DeepOrange.Search.negamax depth,position fen
     }
 
-    best←{
+    score←{⊃⍺ search ⍵}
+
+    nodes←{2⊃⍺ search ⍵}
+
+    bestSearch←{
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ depth, FEN
+        ⍝ ← ←→ move, score, nodes
         (depth fen)←⍵
         ⍺ #.DeepOrange.Search.bestMove depth,position fen
     }
+
+    best←{⊃⍺ bestSearch ⍵}
 
     isCheckmate←{
         ⍝ ⍺ ←→ lookup tables
@@ -153,6 +165,49 @@
 
     test_best_move_returns_an_empty_vector_when_stalemated←{
         ⍬ #.Tests.Framework.Assert.eq ⍺ best 2 'k7/8/1Q6/8/8/8/8/7K b - - 0 1'
+    }
+
+    ⍝ Node counts
+
+    ⍝ Black to move, in check from the rook on a1, with Kb8 and Kb7 as
+    ⍝ its only moves; neither gives check.
+    CHECKED←'k7/8/8/8/8/8/8/R6K b - - 0 1'
+
+    test_counts_a_leaf_as_one_position←{
+        1 #.Tests.Framework.Assert.eq ⍺ nodes 0 'k7/8/8/8/8/8/P7/K7 w - - 0 1'
+    }
+
+    test_counts_a_checkmated_position_as_one_position←{
+        1 #.Tests.Framework.Assert.eq ⍺ nodes 2 'k7/1Q6/1K6/8/8/8/8/8 b - - 0 1'
+    }
+
+    ⍝ Each case: depth, positions searched from the start position. The
+    ⍝ start position has 20 moves and 400 two-move sequences, none of
+    ⍝ which gives check.
+    test_counts_every_position_searched_cases←(
+        ('depth one'(1 21))
+        ('depth two'(2 421))
+    )
+    test_counts_every_position_searched←{
+        (depth expected)←⍵
+        expected #.Tests.Framework.Assert.eq ⍺ nodes depth #.Tests.Helpers.START
+    }
+
+    test_counts_the_positions_searched_by_the_check_extension←{
+        3 #.Tests.Framework.Assert.eq ⍺ nodes 0 CHECKED
+    }
+
+    test_best_move_reports_the_score_of_the_position←{
+        fen←'k7/8/8/3q4/4P3/8/8/K7 w - - 0 1'
+        (⍺ score 2 fen)#.Tests.Framework.Assert.eq 2⊃⍺ bestSearch 2 fen
+    }
+
+    test_best_move_counts_the_root_and_every_position_searched←{
+        421 #.Tests.Framework.Assert.eq 3⊃⍺ bestSearch 2 #.Tests.Helpers.START
+    }
+
+    test_best_move_counts_a_checkmated_root_as_one_position←{
+        1 #.Tests.Framework.Assert.eq 3⊃⍺ bestSearch 2 'k7/1Q6/1K6/8/8/8/8/8 b - - 0 1'
     }
 
 :EndNamespace

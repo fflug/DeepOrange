@@ -136,11 +136,19 @@
 
     bestmove←{
         ⍝ ⍵ ←→ replies to go
-        ⍝ ← ←→ move named by the single bestmove reply
-        1≠≢⍵:#.Tests.Framework.Assert.fail'expected one reply but got ',⍕≢⍵
-        reply←⊃⍵
+        ⍝ ← ←→ move named by the bestmove reply, which comes last
+        0=≢⍵:#.Tests.Framework.Assert.fail'expected a reply but got none'
+        reply←⊃⌽⍵
         ~'bestmove '≡9↑reply:#.Tests.Framework.Assert.fail'expected bestmove but got ',reply
         9↓reply
+    }
+
+    infoField←{
+        ⍝ ⍺ ←→ field name, e.g. 'nodes'
+        ⍝ ⍵ ←→ info line
+        ⍝ ← ←→ word following the field name; '' when there is none
+        fields←words ⍵
+        (1+fields⍳⊂⍺)⊃fields,2⍴⊂''
     }
 
     isLegal←{
@@ -193,6 +201,31 @@
         'a8a7'#.Tests.Framework.Assert.eq bestmove ⍺ replies lines
     }
 
+    test_go_reports_the_search_in_an_info_line_before_the_bestmove←{
+        r←⍺ replies'go'
+        (2 'info ')#.Tests.Framework.Assert.eq(≢r)(5↑⊃r)
+    }
+
+    test_go_reports_the_search_depth←{
+        '2'#.Tests.Framework.Assert.eq'depth'infoField⊃⍺ replies'go'
+    }
+
+    test_go_reports_the_positions_searched←{
+        ⍝ Depth two from the start position: the root, its 20 children
+        ⍝ and their 400 children.
+        '421'#.Tests.Framework.Assert.eq'nodes'infoField⊃⍺ replies'go'
+    }
+
+    test_go_reports_the_best_move_as_the_principal_variation←{
+        r←⍺ replies'go'
+        (bestmove r)#.Tests.Framework.Assert.eq'pv'infoField⊃r
+    }
+
+    test_go_sends_only_the_null_move_when_there_is_no_legal_move←{
+        lines←'position fen k7/1Q6/1K6/8/8/8/8/8 b - - 0 1' 'go'
+        (,⊂'bestmove 0000')#.Tests.Framework.Assert.eq ⍺ replies lines
+    }
+
     test_go_replies_with_the_null_move_when_checkmated←{
         lines←'position fen k7/1Q6/1K6/8/8/8/8/8 b - - 0 1' 'go'
         '0000'#.Tests.Framework.Assert.eq bestmove ⍺ replies lines
@@ -235,6 +268,49 @@
 
     test_other_commands_do_not_finish_the_session←{
         0 #.Tests.Framework.Assert.eq #.DeepOrange.UCI.finished⊃⍺ session'isready'
+    }
+
+    ⍝ infoLine
+
+    ⍝ Each case: depth, score in centipawns, nodes, time in milliseconds,
+    ⍝ best move, expected info line. Nodes per second are truncated to an
+    ⍝ integer; a search under a millisecond counts as one millisecond.
+    test_formats_an_info_line_cases←(
+        ('centipawn score'((2 100 421 15(13 29 0))'info depth 2 score cp 100 nodes 421 time 15 nps 28066 pv e2e4'))
+        ('negative score with a minus sign'((3 ¯50 1000 200(13 29 0))'info depth 3 score cp -50 nodes 1000 time 200 nps 5000 pv e2e4'))
+        ('zero score'((1 0 21 4(13 29 0))'info depth 1 score cp 0 nodes 21 time 4 nps 5250 pv e2e4'))
+        ('search under a millisecond'((1 0 21 0(13 29 0))'info depth 1 score cp 0 nodes 21 time 0 nps 21000 pv e2e4'))
+        ('promotion in the principal variation'((1 800 5 1(53 61 5))'info depth 1 score cp 800 nodes 5 time 1 nps 5000 pv e7e8q'))
+    )
+    test_formats_an_info_line←{
+        (search expected)←⍵
+        expected #.Tests.Framework.Assert.eq #.DeepOrange.UCI.infoLine search
+    }
+
+    ⍝ UCI reports a mate as the number of moves to it, not half-moves,
+    ⍝ negative when the side to move is the one being mated.
+
+    mateScore←{
+        ⍝ ⍵ ←→ score
+        ⍝ ← ←→ score field of the info line for a depth-3 search
+        info←#.DeepOrange.UCI.infoLine 3 ⍵ 100 10(13 29 0)
+        ('score'infoField info),' ',('mate'infoField info),'cp'infoField info
+    }
+
+    test_reports_mate_in_one_for_the_side_to_move←{
+        'mate 1'#.Tests.Framework.Assert.eq mateScore #.DeepOrange.Search.MATE-1
+    }
+
+    test_reports_mate_in_two_for_the_side_to_move←{
+        'mate 2'#.Tests.Framework.Assert.eq mateScore #.DeepOrange.Search.MATE-3
+    }
+
+    test_reports_being_mated_in_one_as_negative←{
+        'mate -1'#.Tests.Framework.Assert.eq mateScore 2-#.DeepOrange.Search.MATE
+    }
+
+    test_reports_being_mated_in_two_as_negative←{
+        'mate -2'#.Tests.Framework.Assert.eq mateScore 4-#.DeepOrange.Search.MATE
     }
 
 :EndNamespace
