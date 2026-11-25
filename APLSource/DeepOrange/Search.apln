@@ -7,13 +7,19 @@
     ⍝ material score, so no material balance outweighs a mate.
     MATE←100000
 
+    ⍝ No search reaches this many half-moves from the root, so a score
+    ⍝ within MAX_PLY of ±MATE is a mate.
+    MAX_PLY←1000
+
     negamax←{
         ⍝ Score of a position by negamax search to a fixed depth.
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ depth, bitboards, game state[, ply]; ply defaults to 0
-        ⍝ ← ←→ score in centipawns from the side to move's point of view;
+        ⍝ ← ←→ score, nodes
+        ⍝      score: centipawns from the side to move's point of view;
         ⍝      a side checkmated ply half-moves from the root scores
         ⍝      ply-MATE, so faster mates score higher for the winner
+        ⍝      nodes: positions searched, this one included
 
         lookups←⍺
         (depth bitboards game_state ply)←4↑⍵,0
@@ -23,37 +29,43 @@
 
          ⍝ Check extension: the search continues past the horizon while in
         ⍝ check, so a mate there is still found.
-        (depth≤0)∧~in_check:##.Evaluation.evaluate bitboards game_state
+        (depth≤0)∧~in_check:(##.Evaluation.evaluate bitboards game_state)1
 
         moves←lookups ##.MoveGeneration.generateLegalMoves bitboards game_state
         side←game_state[##.GameState.side]
         ⍝ If there are no legal moves, it is either stalemate (evaluation 0)
         ⍝ or checkmate (evaluation ply-MATE).
-        0=≢moves:in_check×ply-MATE
+        0=≢moves:(in_check×ply-MATE)1
 
-        ⍝ Each child's score is from the opponent's point of view, so it is
-        ⍝ negated before taking the maximum.
-        ⌈/-lookups{⍺ negamax (depth-1),(bitboards game_state ##.MoveGeneration.makeMove ⍵),ply+1}⍤1⊢moves
+        ⍝ One row of score and nodes per move. Each child's score is from
+        ⍝ the opponent's point of view, so it is negated before taking the
+        ⍝ maximum.
+        children←lookups{⍺ negamax(depth-1),(bitboards game_state ##.MoveGeneration.makeMove ⍵),ply+1}⍤1⊢moves
+        (⌈/-⊣/children),1++/⊢/children
     }
 
     bestMove←{
         ⍝ Move with the highest negamax score.
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ depth, bitboards, game state
-        ⍝ ← ←→ move (from to promotion); ⍬ when there is no legal move
+        ⍝ ← ←→ move, score, nodes
+        ⍝      move: (from to promotion); ⍬ when there is no legal move
+        ⍝      score, nodes: as returned by negamax for the position
 
         lookups←⍺
         (depth bitboards game_state)←⍵
 
         moves←lookups ##.MoveGeneration.generateLegalMoves bitboards game_state
-        0=≢moves:⍬
+        0=≢moves:(⊂⍬),lookups negamax depth bitboards game_state
 
         ⍝ The positions after the root moves are one ply from the root.
-        scores←-lookups{⍺ negamax(depth-1),(bitboards game_state ##.MoveGeneration.makeMove ⍵),1}⍤1⊢moves
+        children←lookups{⍺ negamax(depth-1),(bitboards game_state ##.MoveGeneration.makeMove ⍵),1}⍤1⊢moves
+        scores←-⊣/children
+        score←⌈/scores
 
         ⍝ Pick one of the best moves at random to keep variety.
-        best←moves⌿⍨scores=⌈/scores
-        best[?≢best;] 
+        best←moves⌿⍨scores=score
+        (best[?≢best;])score(1++/⊢/children)
     }
 
     randomMove←{

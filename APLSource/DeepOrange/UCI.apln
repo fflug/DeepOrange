@@ -23,6 +23,12 @@
     ⍝ Move reported when the side to move has no legal move.
     NULL_MOVE←'0000'
 
+    ⍝ Fields of the info line, in the order infoLine writes them.
+    INFO_FIELDS←'depth' 'score' 'nodes' 'time' 'nps' 'pv'
+
+    ⍝ Half-moves searched from the root for go.
+    SEARCH_DEPTH←2
+
     ID_LINES←'id name Deep Orange' 'id author Finn Flug'REPLY_UCIOK
     NO_REPLY←0⍴⊂''
 
@@ -55,19 +61,49 @@
         command≡CMD_ISREADY:⍺(,⊂REPLY_READYOK)
         command≡CMD_UCINEWGAME:(newState lookups)NO_REPLY
         command≡CMD_POSITION:(lookups(handlePositionCmd args)done)NO_REPLY
-        command≡CMD_GO:⍺(,⊂handleGoCmd lookups position)
+        command≡CMD_GO:⍺(handleGoCmd lookups position)
         command≡CMD_QUIT:(lookups position 1)NO_REPLY
         ⍺ NO_REPLY
     }
 
     handleGoCmd←{
-        ⍝ Search parameters are ignored; the move is chosen at random.
+        ⍝ Search parameters are ignored; the search has a fixed depth.
         ⍝ ⍵ ←→ lookup tables, position
-        ⍝ ← ←→ bestmove reply; the null move when there is no legal move
+        ⍝ ← ←→ info line and bestmove reply; only the bestmove reply with
+        ⍝      the null move when there is no legal move
         (lookups position)←⍵
-        move←lookups ##.Search.bestMove 2,position
-        0=≢move:REPLY_BESTMOVE,' ',NULL_MOVE
-        REPLY_BESTMOVE,' ',moveToUCI move
+        start←3⊃⎕AI
+        (move score nodes)←lookups ##.Search.bestMove SEARCH_DEPTH,position
+        time←(3⊃⎕AI)-start
+        0=≢move:,⊂REPLY_BESTMOVE,' ',NULL_MOVE
+        (infoLine SEARCH_DEPTH score nodes time move)(REPLY_BESTMOVE,' ',moveToUCI move)
+    }
+
+    infoLine←{
+        ⍝ UCI info line describing a finished search.
+        ⍝ ⍵ ←→ depth, score, nodes, time in milliseconds, best move
+        ⍝ ← ←→ e.g. 'info depth 2 score cp 36 nodes 421 time 15 nps 28066 pv e2e4'
+        (depth score nodes time move)←⍵
+        ⍝ A search under a millisecond counts as one, so nps is defined.
+        nps←⌊nodes×1000÷1⌈time
+        values←(uciNumber depth)(uciScore score)(uciNumber nodes)(uciNumber time)(uciNumber nps)(moveToUCI move)
+        'info',∊' ',¨INFO_FIELDS,¨' ',¨values
+    }
+
+    uciScore←{
+        ⍝ Score field of an info line.
+        ⍝ ⍵ ←→ score from Search
+        ⍝ ← ←→ 'cp <centipawns>', or 'mate <moves>' with negative moves
+        ⍝      when the side to move is being mated
+        plies←##.Search.MATE-|⍵
+        plies≥##.Search.MAX_PLY:'cp ',uciNumber ⍵
+        'mate ',uciNumber(×⍵)×⌈plies÷2
+    }
+
+    uciNumber←{
+        ⍝ Integer in UCI notation: a leading '-', never exponent form.
+        ⎕PP←34
+        '-'@('¯'∘=)⍕⍵
     }
 
     handlePositionCmd←{

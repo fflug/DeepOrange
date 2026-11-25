@@ -207,7 +207,7 @@
     }
 
     test_go_reports_the_search_depth←{
-        '2'#.Tests.Framework.Assert.eq'depth'infoField⊃⍺ replies'go'
+        (,'2')#.Tests.Framework.Assert.eq'depth'infoField⊃⍺ replies'go'
     }
 
     test_go_reports_the_positions_searched←{
