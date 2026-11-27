@@ -89,10 +89,37 @@
         #.Tests.Framework.Assert.ok(score better)>score worse
     }
 
-    test_prefers_a_castled_king_to_a_king_in_the_centre←{
-        castled←score'k7/8/8/8/8/8/8/6K1 w - - 0 1'
-        exposed←score'k7/8/8/8/4K3/8/8/8 w - - 0 1'
+    ⍝ King placement
+
+    ⍝ The king's square value blends a middlegame table, which keeps it
+    ⍝ sheltered on the back rank, with an endgame table, which draws it
+    ⍝ to the centre. The less material other than pawns is left, the
+    ⍝ more the endgame table counts.
+
+    test_prefers_a_castled_king_to_a_king_in_the_centre_in_the_middlegame←{
+        ⍝ Every piece is on the board; the white king stands on g1 or e4.
+        castled←score'rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQ1BKR w kq - 0 1'
+        exposed←score'rnbqkbnr/pppppppp/8/8/4K3/5N2/PPPPPPPP/RNBQ1B1R w kq - 0 1'
         #.Tests.Framework.Assert.ok castled>exposed
+    }
+
+    test_prefers_a_king_in_the_centre_to_a_king_in_the_corner_in_the_endgame←{
+        ⍝ Kings and pawns only; the white king stands on e4 or h1.
+        central←score'k7/p7/8/8/4K3/8/P7/8 w - - 0 1'
+        cornered←score'k7/p7/8/8/8/8/P7/7K w - - 0 1'
+        #.Tests.Framework.Assert.ok central>cornered
+    }
+
+    test_values_the_centre_more_for_the_king_as_material_comes_off←{
+        ⍝ Each row: the white king on e4, then on a1, with the same
+        ⍝ other pieces. The other pieces cancel out in the difference.
+        positions←(
+            ('k1rq1r2/8/8/8/4K3/8/8/2RQ1R2 w - - 0 1' 'k1rq1r2/8/8/8/8/8/8/K1RQ1R2 w - - 0 1')
+            ('k1r2r2/8/8/8/4K3/8/8/2R2R2 w - - 0 1' 'k1r2r2/8/8/8/8/8/8/K1R2R2 w - - 0 1')
+            ('k7/8/8/8/4K3/8/8/8 w - - 0 1' 'k7/8/8/8/8/8/8/K7 w - - 0 1')
+        )
+        gains←{-/score¨⍵}¨positions
+        #.Tests.Framework.Assert.ok∧/2</gains
     }
 
 :EndNamespace
