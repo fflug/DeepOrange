@@ -1,24 +1,144 @@
 :Namespace Evaluation
-    ⍝ Hand-crafted evaluation
+    ⍝ Hand-crafted evaluation: material plus piece-square tables.
 
     ⎕IO ⎕ML←1
 
+    ⍝ Piece values in centipawns, in the order P N B R Q K.
+    VALUES←100 320 330 500 900 0
+
+    ⍝ Piece-square tables from the Simplified Evaluation Function. Each
+    ⍝ table is a bonus in centipawns for a white piece on that square,
+    ⍝ laid out as the board is seen from white's side: rank 8 is the top
+    ⍝ row, the a-file the left column. No entry exceeds half a pawn, so
+    ⍝ placement never outweighs a piece.
+
+    PAWN_TABLE←[
+          0   0   0   0   0   0   0   0
+         50  50  50  50  50  50  50  50
+         10  10  20  30  30  20  10  10
+          5   5  10  25  25  10   5   5
+          0   0   0  20  20   0   0   0
+          5  ¯5 ¯10   0   0 ¯10  ¯5   5
+          5  10  10 ¯20 ¯20  10  10   5
+          0   0   0   0   0   0   0   0
+    ]
+
+    KNIGHT_TABLE←[
+        ¯50 ¯40 ¯30 ¯30 ¯30 ¯30 ¯40 ¯50
+        ¯40 ¯20   0   0   0   0 ¯20 ¯40
+        ¯30   0  10  15  15  10   0 ¯30
+        ¯30   5  15  20  20  15   5 ¯30
+        ¯30   0  15  20  20  15   0 ¯30
+        ¯30   5  10  15  15  10   5 ¯30
+        ¯40 ¯20   0   5   5   0 ¯20 ¯40
+        ¯50 ¯40 ¯30 ¯30 ¯30 ¯30 ¯40 ¯50
+    ]
+
+    BISHOP_TABLE←[
+        ¯20 ¯10 ¯10 ¯10 ¯10 ¯10 ¯10 ¯20
+        ¯10   0   0   0   0   0   0 ¯10
+        ¯10   0   5  10  10   5   0 ¯10
+        ¯10   5   5  10  10   5   5 ¯10
+        ¯10   0  10  10  10  10   0 ¯10
+        ¯10  10  10  10  10  10  10 ¯10
+        ¯10   5   0   0   0   0   5 ¯10
+        ¯20 ¯10 ¯10 ¯10 ¯10 ¯10 ¯10 ¯20
+    ]
+
+    ROOK_TABLE←[
+          0   0   0   0   0   0   0   0
+          5  10  10  10  10  10  10   5
+         ¯5   0   0   0   0   0   0  ¯5
+         ¯5   0   0   0   0   0   0  ¯5
+         ¯5   0   0   0   0   0   0  ¯5
+         ¯5   0   0   0   0   0   0  ¯5
+         ¯5   0   0   0   0   0   0  ¯5
+          0   0   0   5   5   0   0   0
+    ]
+
+    QUEEN_TABLE←[
+        ¯20 ¯10 ¯10  ¯5  ¯5 ¯10 ¯10 ¯20
+        ¯10   0   0   0   0   0   0 ¯10
+        ¯10   0   5   5   5   5   0 ¯10
+         ¯5   0   5   5   5   5   0  ¯5
+          0   0   5   5   5   5   0  ¯5
+        ¯10   5   5   5   5   5   0 ¯10
+        ¯10   0   5   0   0   0   0 ¯10
+        ¯20 ¯10 ¯10  ¯5  ¯5 ¯10 ¯10 ¯20
+    ]
+
+    ⍝ Middlegame king: sheltered on the back rank behind its pawns.
+    KING_MIDDLEGAME_TABLE←[
+        ¯30 ¯40 ¯40 ¯50 ¯50 ¯40 ¯40 ¯30
+        ¯30 ¯40 ¯40 ¯50 ¯50 ¯40 ¯40 ¯30
+        ¯30 ¯40 ¯40 ¯50 ¯50 ¯40 ¯40 ¯30
+        ¯30 ¯40 ¯40 ¯50 ¯50 ¯40 ¯40 ¯30
+        ¯20 ¯30 ¯30 ¯40 ¯40 ¯30 ¯30 ¯20
+        ¯10 ¯20 ¯20 ¯20 ¯20 ¯20 ¯20 ¯10
+         20  20   0   0   0   0  20  20
+         20  30  10   0   0  10  30  20
+    ]
+
+    ⍝ Endgame king: active in the centre.
+    KING_ENDGAME_TABLE←[
+        ¯50 ¯40 ¯30 ¯20 ¯20 ¯30 ¯40 ¯50
+        ¯30 ¯20 ¯10   0   0 ¯10 ¯20 ¯30
+        ¯30 ¯10  20  30  30  20 ¯10 ¯30
+        ¯30 ¯10  30  40  40  30 ¯10 ¯30
+        ¯30 ¯10  30  40  40  30 ¯10 ¯30
+        ¯30 ¯10  20  30  30  20 ¯10 ¯30
+        ¯30 ¯30   0   0   0   0 ¯30 ¯30
+        ¯50 ¯30 ¯30 ¯30 ¯30 ¯30 ¯30 ¯50
+    ]
+
+    ⍝ Value of each piece type on each square, one row per type in the
+    ⍝ order P N B R Q K and one column per square, a1 to h8, with the
+    ⍝ middlegame king. Reversing a table's rows puts rank 1 first, as in
+    ⍝ the bitboards. A black piece is worth what a white piece is worth
+    ⍝ on the square reflected top to bottom, which is the table
+    ⍝ unreversed.
+    TABLES←PAWN_TABLE KNIGHT_TABLE BISHOP_TABLE ROOK_TABLE QUEEN_TABLE KING_MIDDLEGAME_TABLE
+    WHITE_VALUES←VALUES+⍤0 1↑,∘⊖¨TABLES
+    BLACK_VALUES←VALUES+⍤0 1↑,¨TABLES
+
+    ⍝ Change in a king's value from the middlegame to the endgame table,
+    ⍝ per square, a1 to h8.
+    KING_SHIFT←KING_ENDGAME_TABLE-KING_MIDDLEGAME_TABLE
+    WHITE_KING_SHIFT←,⊖KING_SHIFT
+    BLACK_KING_SHIFT←,KING_SHIFT
+
+    ⍝ Game phase: each piece other than pawns and kings counts towards
+    ⍝ it, in the order P N B R Q K. The pieces of the start position
+    ⍝ make up the full middlegame, MAX_PHASE; no pieces left is the pure
+    ⍝ endgame, 0. Promotions can push the count past MAX_PHASE, so it is
+    ⍝ capped there.
+    PHASE_WEIGHTS←0 1 1 2 4 0
+    MAX_PHASE←24
+
     evaluate←{
-        ⍝ Evaluate a given postion.
-        ⍝ ⍵ ←→ bitboards, game_state
-        ⍝ ← ←→ score
+        ⍝ Score of a position from its material and piece placement.
+        ⍝ ⍵ ←→ bitboards, game state
+        ⍝ ← ←→ score: whole centipawns from the side to move's point of
+        ⍝      view
 
         (bitboards game_state)←⍵
+        white_pieces←bitboards[##.Pieces.(P N B R Q K);]
+        black_pieces←bitboards[##.Pieces.(p n b r q k);]
 
-        ⍝ The evaluation is symmetric, so a positive score is always good for white
-        ⍝ and a negative score is always good for black.
+        ⍝ The king's value moves from the middlegame towards the endgame
+        ⍝ table in proportion to the material gone, so a single trade
+        ⍝ never makes the score jump.
+        phase←MAX_PHASE⌊+/PHASE_WEIGHTS×+/white_pieces+black_pieces
+        endgame←1-phase÷MAX_PHASE
+        white←(+/,WHITE_VALUES×white_pieces)+endgame×+/WHITE_KING_SHIFT×white_pieces[6;]
+        black←(+/,BLACK_VALUES×black_pieces)+endgame×+/BLACK_KING_SHIFT×black_pieces[6;]
+
+        ⍝ white-black scores from white's point of view; the sign turns
+        ⍝ that into the side to move's. Rounding half away from zero
+        ⍝ gives a position and its colour-swapped mirror image the same
+        ⍝ score.
+        score←white-black
         sign←1-2×game_state[##.GameState.side]
-
-        ⍝ Create weight vector in order of rows of bitboards
-        weights←12⍴0
-        weights[##.Pieces.(P N B R Q K)]←100 320 330 500 900 0
-        weights[##.Pieces.(p n b r q k)]←-weights[##.Pieces.(P N B R Q K)]
-        score←+/weights×+/bitboards
-        score×sign
+        sign×(×score)×⌊0.5+|score
     }
 :EndNamespace
