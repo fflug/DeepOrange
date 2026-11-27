@@ -117,8 +117,9 @@
     ⍝ Re1 mate.
     BACK_RANK←'4r1k1/n7/8/8/8/8/5PPP/R5K1 w - - 0 1'
 
-    test_depth_zero_scores_a_quiet_position_by_material←{
-        100 #.Tests.Framework.Assert.eq ⍺ score 0 'k7/8/8/8/8/8/P7/K7 w - - 0 1'
+    test_depth_zero_scores_a_quiet_position_by_its_evaluation←{
+        fen←'k7/8/8/8/8/8/P7/K7 w - - 0 1'
+        (#.DeepOrange.Evaluation.evaluate position fen)#.Tests.Framework.Assert.eq ⍺ score 0 fen
     }
 
     test_depth_zero_recognises_checkmate←{
@@ -146,8 +147,9 @@
     }
 
     test_scores_a_won_piece←{
-        ⍝ exd5 wins the queen; the remaining material is one white pawn.
-        100 #.Tests.Framework.Assert.eq ⍺ score 2 WON_PIECE
+        ⍝ White is a queen down unless exd5 wins it back; afterwards the
+        ⍝ only material left is one white pawn.
+        #.Tests.Framework.Assert.ok 0<⍺ score 2 WON_PIECE
     }
 
     test_best_move_plays_mate_in_one←{
@@ -284,18 +286,21 @@
         1 #.Tests.Framework.Assert.eq ⍺ abNodes 2 'k7/1Q6/1K6/8/8/8/8/8 b - - 0 1'
     }
 
-    ⍝ Windows around the won-piece position, whose depth-two score is 100.
+    ⍝ Windows around the depth-two score of the won-piece position.
 
     test_alpha_beta_returns_the_exact_score_inside_the_window←{
-        100 #.Tests.Framework.Assert.eq ⍺ abScore 2 WON_PIECE 99 101
+        exact←⍺ abScore 2 WON_PIECE
+        exact #.Tests.Framework.Assert.eq ⍺ abScore 2 WON_PIECE(exact-1)(exact+1)
     }
 
     test_alpha_beta_returns_at_most_alpha_when_the_score_is_below_the_window←{
-        #.Tests.Framework.Assert.ok 200≥⍺ abScore 2 WON_PIECE 200 300
+        alpha←100+⍺ abScore 2 WON_PIECE
+        #.Tests.Framework.Assert.ok alpha≥⍺ abScore 2 WON_PIECE alpha(alpha+100)
     }
 
     test_alpha_beta_returns_at_least_beta_when_the_score_is_above_the_window←{
-        #.Tests.Framework.Assert.ok 0≤⍺ abScore 2 WON_PIECE ¯100 0
+        beta←(⍺ abScore 2 WON_PIECE)-100
+        #.Tests.Framework.Assert.ok beta≤⍺ abScore 2 WON_PIECE(beta-100)beta
     }
 
 :EndNamespace

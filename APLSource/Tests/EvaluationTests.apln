@@ -4,21 +4,33 @@
     ⍝ Scores are in centipawns from the point of view of the side to
     ⍝ move: positive when the side to move is ahead.
 
+    ⍝ The score is the material balance plus a bonus or penalty for the
+    ⍝ square each piece stands on, from a table per piece type, mirrored
+    ⍝ for black. No square changes a piece's value by more than half a
+    ⍝ pawn.
+    PLACEMENT_LIMIT←50
+
     score←{#.DeepOrange.Evaluation.evaluate #.DeepOrange.Board.initFromFEN ⍵}
+
+    near←{
+        ⍝ ⍺ ←→ material value, number of pieces whose placement counts
+        ⍝ ⍵ ←→ score
+        ⍝ ← ←→ 1 if the score is the value give or take their placement
+        (value pieces)←⍺
+        (pieces×PLACEMENT_LIMIT)≥|⍵-value
+    }
 
     test_start_position_scores_zero←{
         0 #.Tests.Framework.Assert.eq score #.Tests.Helpers.START
     }
 
     test_bare_kings_score_zero←{
+        ⍝ Kings on a1 and a8 stand on mirrored squares.
         0 #.Tests.Framework.Assert.eq score'k7/8/8/8/8/8/8/K7 w - - 0 1'
     }
 
-    test_equal_material_scores_zero←{
-        0 #.Tests.Framework.Assert.eq score'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1'
-    }
-
-    ⍝ Each case: piece letter, value of one extra piece of that type.
+    ⍝ Each case: piece letter, value of one extra piece of that type. The
+    ⍝ kings stand on mirrored squares and cancel out.
     test_values_an_extra_piece_cases←(
         ('pawn'('P' 100))
         ('knight'('N' 320))
@@ -28,24 +40,59 @@
     )
     test_values_an_extra_piece←{
         (letter value)←⍵
-        value #.Tests.Framework.Assert.eq score'k7/8/8/8/8/8/',letter,'7/K7 w - - 0 1'
+        #.Tests.Framework.Assert.ok(value 1)near score'k7/8/8/8/8/8/',letter,'7/K7 w - - 0 1'
     }
 
     test_scores_from_the_point_of_view_of_the_side_to_move←{
-        ¯100 #.Tests.Framework.Assert.eq score'k7/8/8/8/8/8/P7/K7 b - - 0 1'
+        fen←'k7/8/8/8/4N3/8/8/K7 '
+        (score fen,'w - - 0 1')#.Tests.Framework.Assert.eq-score fen,'b - - 0 1'
     }
 
     test_scores_black_material_advantage_for_black_to_move←{
-        900 #.Tests.Framework.Assert.eq score'kq6/8/8/8/8/8/8/K7 b - - 0 1'
+        #.Tests.Framework.Assert.ok(900 1)near score'kq6/8/8/8/8/8/8/K7 b - - 0 1'
     }
 
     test_adds_the_values_of_several_pieces←{
-        200 #.Tests.Framework.Assert.eq score'k7/8/8/8/8/8/PP6/K7 w - - 0 1'
+        #.Tests.Framework.Assert.ok(200 2)near score'k7/8/8/8/8/8/PP6/K7 w - - 0 1'
     }
 
     test_subtracts_the_opponents_material←{
         ⍝ White rook against black knight.
-        180 #.Tests.Framework.Assert.eq score'kn6/8/8/8/8/8/8/K6R w - - 0 1'
+        #.Tests.Framework.Assert.ok(180 2)near score'kn6/8/8/8/8/8/8/K6R w - - 0 1'
+    }
+
+    ⍝ Each case: FEN. Positions with pieces of both colours on squares of
+    ⍝ differing value, so a table that is not mirrored for black shows.
+    test_scores_a_position_as_its_colour_swapped_mirror_image_cases←(
+        ('lone knight'(,⊂'k7/8/8/8/4N3/8/8/K7 w - - 0 1'))
+        ('pawns and kings'(,⊂'8/5kp1/8/8/3P4/8/1K6/8 b - - 0 1'))
+        ('middlegame'(,⊂'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1'))
+        ('after 1. e4'(,⊂'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
+    )
+    test_scores_a_position_as_its_colour_swapped_mirror_image←{
+        fen←⊃⍵
+        (score fen)#.Tests.Framework.Assert.eq score #.Tests.Helpers.mirror fen
+    }
+
+    ⍝ Each case: FEN with a piece on a better square, FEN with the same
+    ⍝ piece on a worse square. The kings stand on mirrored squares.
+    test_prefers_a_piece_on_a_better_square_cases←(
+        ('knight in the centre over the corner'('k7/8/8/8/4N3/8/8/K7 w - - 0 1' 'k7/8/8/8/8/8/8/K6N w - - 0 1'))
+        ('bishop in the centre over the corner'('k7/8/8/8/3B4/8/8/K7 w - - 0 1' 'k6B/8/8/8/8/8/8/K7 w - - 0 1'))
+        ('queen in the centre over the corner'('k7/8/8/8/3Q4/8/8/K7 w - - 0 1' 'k7/8/8/8/8/8/8/K6Q w - - 0 1'))
+        ('rook on the seventh rank over the second'('k7/3R4/8/8/8/8/8/K7 w - - 0 1' 'k7/8/8/8/8/8/3R4/K7 w - - 0 1'))
+        ('advanced pawn over a pawn on its home square'('k7/8/4P3/8/8/8/8/K7 w - - 0 1' 'k7/8/8/8/8/8/4P3/K7 w - - 0 1'))
+        ('pawn on the seventh rank over the fourth'('k7/4P3/8/8/8/8/8/K7 w - - 0 1' 'k7/8/8/8/4P3/8/8/K7 w - - 0 1'))
+    )
+    test_prefers_a_piece_on_a_better_square←{
+        (better worse)←⍵
+        #.Tests.Framework.Assert.ok(score better)>score worse
+    }
+
+    test_prefers_a_castled_king_to_a_king_in_the_centre←{
+        castled←score'k7/8/8/8/8/8/8/6K1 w - - 0 1'
+        exposed←score'k7/8/8/8/4K3/8/8/8 w - - 0 1'
+        #.Tests.Framework.Assert.ok castled>exposed
     }
 
 :EndNamespace

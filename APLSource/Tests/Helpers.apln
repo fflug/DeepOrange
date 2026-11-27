@@ -20,6 +20,30 @@
         ⍵[⍋⍵;]
     }
 
+    mirror←{
+        ⍝ FEN of the position with the board reflected top to bottom and
+        ⍝ the colours swapped, including the side to move. Its evaluation
+        ⍝ from the side to move's point of view is that of the original.
+        ⍝ ⍵ ←→ FEN
+        fields←' '(≠⊆⊢)⍵
+        (pieces side castling en_passant)←4↑fields
+        pieces←¯1↓∊(swapCase¨⌽'/'(≠⊆⊢)pieces),¨'/'
+        side←,'wb'['bw'⍳⊃side]
+        castling←swapCase castling
+        en_passant←{⍵≡,'-':⍵ ⋄ (⊃⍵),'63'['36'⍳⊃⌽⍵]}en_passant
+        ¯1↓∊(pieces side castling en_passant,4↓fields),¨' '
+    }
+
+    swapCase←{
+        ⍝ Letters with upper and lower case exchanged; other characters kept.
+        upper←⎕A
+        lower←⎕C ⎕A
+        from←upper,lower
+        to←lower,upper
+        m←⍵∊from
+        (to[from⍳m/⍵])@(⍸m)⊢⍵
+    }
+
     START←'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
 :EndNamespace
