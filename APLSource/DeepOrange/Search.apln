@@ -7,6 +7,10 @@
     ⍝ material score, so no material balance outweighs a mate.
     MATE←100000
 
+    ⍝ Bound of the default search window. Every score lies strictly
+    ⍝ between -INFINITY and INFINITY.
+    INFINITY←MATE+1
+
     ⍝ No search reaches this many half-moves from the root, so a score
     ⍝ within MAX_PLY of ±MATE is a mate.
     MAX_PLY←1000
@@ -44,28 +48,85 @@
         (⌈/-⊣/children),1++/⊢/children
     }
 
+
+
+    alphaBeta←{
+        ⍝ Score of a position by negamax search with alpha-beta pruning.
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ depth, bitboards, game state[, alpha, beta[, ply]];
+        ⍝      the window defaults to every possible score, ply to 0
+        ⍝ ← ←→ score, nodes
+        ⍝      score: as negamax when it lies strictly inside the window;
+        ⍝      at most alpha when the true score is at most alpha, and at
+        ⍝      least beta when the true score is at least beta
+        ⍝      nodes: positions searched, this one included
+
+        lookups←⍺
+        (depth bitboards game_state alpha beta ply)←⍵,(3-⍨≢⍵)↓(-INFINITY)INFINITY 0
+
+        side←game_state[##.GameState.side]
+        in_check←lookups ##.MoveGeneration.isKingInCheck bitboards side
+
+        ⍝ Check extension, as in negamax.
+        (depth≤0)∧~in_check:(##.Evaluation.evaluate bitboards game_state)1
+
+        moves←lookups ##.MoveGeneration.generateLegalMoves bitboards game_state
+        0=≢moves:(in_check×ply-MATE)1
+
+        (score nodes)←2↑lookups searchMoves depth bitboards game_state alpha beta ply moves
+        score(1+nodes)
+    }
+
+    searchMoves←{
+        ⍝ Alpha-beta search of the positions after each move, in order.
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ depth, bitboards, game state, alpha, beta, ply, moves
+        ⍝      [, best, best index, nodes, next index];
+        ⍝      ply is that of the position the moves are made in, and
+        ⍝      moves has at least one row; the trailing items carry the
+        ⍝      search so far between moves and are omitted by callers
+        ⍝ ← ←→ score, nodes, index
+        ⍝      score: best score from the side to move's point of view,
+        ⍝      bounded by the window as for alphaBeta
+        ⍝      nodes: positions searched, the position itself excluded
+        ⍝      index: row of the first move reaching that score
+
+        lookups←⍺
+        (depth bitboards game_state alpha beta ply moves best best_index nodes i)←⍵,(¯7+≢⍵)↓(-INFINITY)1 0 1
+        i>≢moves:best nodes best_index
+
+        child←bitboards game_state ##.MoveGeneration.makeMove moves[i;]
+        (child_score child_nodes)←lookups alphaBeta(depth-1),child,(-beta),(-alpha),ply+1
+        improved←best<-child_score
+        best←best⌈-child_score
+        best_index←(1+improved)⊃best_index i
+        nodes←nodes+child_nodes
+
+        ⍝ The search stops once a move reaches beta: the opponent avoids
+        ⍝ this position, so the remaining moves cannot change the result.
+        best≥beta:best nodes best_index
+        lookups ∇ depth bitboards game_state(alpha⌈best)beta ply moves best best_index nodes(i+1)
+    }
+
     bestMove←{
-        ⍝ Move with the highest negamax score.
+        ⍝ Move with the highest alpha-beta score.
         ⍝ ⍺ ←→ lookup tables
         ⍝ ⍵ ←→ depth, bitboards, game state
         ⍝ ← ←→ move, score, nodes
         ⍝      move: (from to promotion); ⍬ when there is no legal move
-        ⍝      score, nodes: as returned by negamax for the position
+        ⍝      score, nodes: as returned by alphaBeta for the position
 
         lookups←⍺
         (depth bitboards game_state)←⍵
 
         moves←lookups ##.MoveGeneration.generateLegalMoves bitboards game_state
-        0=≢moves:(⊂⍬),lookups negamax depth bitboards game_state
+        0=≢moves:(⊂⍬),lookups alphaBeta depth bitboards game_state
 
-        ⍝ The positions after the root moves are one ply from the root.
-        children←lookups{⍺ negamax(depth-1),(bitboards game_state ##.MoveGeneration.makeMove ⍵),1}⍤1⊢moves
-        scores←-⊣/children
-        score←⌈/scores
-
-        ⍝ Pick one of the best moves at random to keep variety.
-        best←moves⌿⍨scores=score
-        (best[?≢best;])score(1++/⊢/children)
+        ⍝ The first of several equally good moves is chosen, so shuffling
+        ⍝ picks one of them at random and keeps variety.
+        moves←moves[?⍨≢moves;]
+        (score nodes index)←lookups searchMoves depth bitboards game_state(-INFINITY)INFINITY 0 moves
+        moves[index;]score(1+nodes)
     }
 
     randomMove←{

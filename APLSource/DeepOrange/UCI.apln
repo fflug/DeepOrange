@@ -27,7 +27,7 @@
     INFO_FIELDS←'depth' 'score' 'nodes' 'time' 'nps' 'pv'
 
     ⍝ Half-moves searched from the root for go.
-    SEARCH_DEPTH←2
+    SEARCH_DEPTH←4
 
     ID_LINES←'id name Deep Orange' 'id author Finn Flug'REPLY_UCIOK
     NO_REPLY←0⍴⊂''
