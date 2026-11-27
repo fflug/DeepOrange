@@ -1,0 +1,8 @@
+ board←Show bb;piece;Pieces;ind
+ board←64⍴'.'
+ Pieces←DeepOrange.Pieces
+ :For piece :In 'PNBRQKpnbrqk'
+     ind←Pieces ⎕VGET piece
+     board[⍸bb[ind;]]←piece
+ :EndFor
+ board←⊖8 8⍴board

@@ -1,0 +1,56 @@
+name: Release
+
+# Pushing a tag such as v0.2.0 runs the tests, publishes a GitHub release
+# with the packaged engine, and plays the new release against the
+# previous one. Tags with a hyphen, such as v0.2.0-rc1, are published as
+# pre-releases.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
+  release:
+    needs: tests
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      previous: ${{ steps.previous.outputs.tag }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Looked up before the new release exists, so it names the release
+      # this one is compared against.
+      - name: Find the previous release
+        id: previous
+        run: |
+          tag="$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 \
+            --json tagName --jq '.[0].tagName // ""')"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Package
+        run: scripts/package.sh "$TAG" dist
+
+      - name: Publish
+        run: |
+          flags=()
+          case "$TAG" in *-*) flags+=(--prerelease) ;; esac
+          gh release create "$TAG" dist/*.zip \
+            --verify-tag --title "Deep Orange $TAG" --generate-notes "${flags[@]}"
+
+  match:
+    needs: release
+    if: needs.release.outputs.previous != ''
+    uses: ./.github/workflows/match.yml
+    with:
+      baseline: ${{ needs.release.outputs.previous }}

@@ -1,0 +1,40 @@
+name: Set up Dyalog APL
+description: Installs Dyalog APL for Linux x86_64, so that dyalogscript is on the PATH.
+
+inputs:
+  version:
+    description: Full Dyalog version, as in the installer file name.
+    default: 20.0.53963
+
+runs:
+  using: composite
+  steps:
+    - name: Cache the installer
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ~/dyalog-installer
+        key: dyalog-${{ inputs.version }}-${{ runner.os }}-${{ runner.arch }}
+
+    - name: Download the installer
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        major="${VERSION%.*}"
+        deb="linux_64_${VERSION}_unicode.x86_64.deb"
+        mkdir -p ~/dyalog-installer
+        wget -q -O ~/dyalog-installer/dyalog.deb \
+          "https://www.dyalog.com/uploads/php/download.dyalog.com/download.php?file=${major}%2F${deb}"
+
+    - name: Install
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo dpkg -i ~/dyalog-installer/dyalog.deb || {
+          sudo apt-get update
+          sudo apt-get install -y -f --no-install-recommends
+        }
+        command -v dyalogscript

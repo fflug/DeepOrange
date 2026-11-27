@@ -43,3 +43,7 @@ target/
 .env
 .env.local
 .env.*.local
+
+# Release archives and match results
+dist/
+matches/results/

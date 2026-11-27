@@ -1,0 +1,99 @@
+name: Match
+
+# Plays the engine at the selected ref against a released engine with
+# cutechess-cli. Started by hand from the Actions tab, and by the release
+# workflow for each new release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      games:
+        description: Number of games (even)
+        type: number
+        default: 100
+      baseline:
+        description: Release tag to play against (default the latest release)
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      games:
+        type: number
+        default: 100
+      baseline:
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  match:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # The latest release other than the ref being tested, so a release
+      # is never played against itself.
+      - name: Choose the baseline
+        id: baseline
+        env:
+          REQUESTED: ${{ inputs.baseline }}
+          CURRENT: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: |
+          tag="$REQUESTED"
+          if [ -z "$tag" ]; then
+            tag="$(gh release list --exclude-drafts --exclude-pre-releases --limit 20 \
+              --json tagName --jq "[.[].tagName | select(. != \"$CURRENT\")][0] // \"\"")"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [ -z "$tag" ]; then
+            echo "No release to play against yet." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Download the baseline
+        if: steps.baseline.outputs.tag != ''
+        env:
+          TAG: ${{ steps.baseline.outputs.tag }}
+        run: |
+          gh release download "$TAG" --pattern 'deep-orange-*.zip' --dir "$RUNNER_TEMP"
+          unzip -q "$RUNNER_TEMP/deep-orange-$TAG.zip" -d "$RUNNER_TEMP/baseline"
+
+      - if: steps.baseline.outputs.tag != ''
+        uses: ./.github/actions/setup-dyalog
+
+      - if: steps.baseline.outputs.tag != ''
+        uses: ./.github/actions/setup-cutechess
+
+      - name: Play
+        if: steps.baseline.outputs.tag != ''
+        env:
+          TAG: ${{ steps.baseline.outputs.tag }}
+          GAMES: ${{ inputs.games }}
+          BASELINE_NAME: ${{ steps.baseline.outputs.tag }}
+          OUT: ${{ runner.temp }}/results
+        run: scripts/match.sh "$RUNNER_TEMP/baseline/deep-orange-$TAG" "$GAMES"
+
+      - name: Summarise
+        if: always() && steps.baseline.outputs.tag != ''
+        env:
+          TAG: ${{ steps.baseline.outputs.tag }}
+          LOG: ${{ runner.temp }}/results/match.log
+        run: |
+          {
+            echo "## ${GITHUB_REF_NAME} against ${TAG}"
+            echo
+            echo '```'
+            grep -E '^(Score of|Elo difference|Finished match)' "$LOG" | tail -n 3 || echo "No result: see the log."
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the games
+        if: always() && steps.baseline.outputs.tag != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: match-vs-${{ steps.baseline.outputs.tag }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/results
