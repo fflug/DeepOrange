@@ -211,9 +211,11 @@
     }
 
     test_go_reports_the_positions_searched←{
-        ⍝ Depth two from the start position: the root, its 20 children
-        ⍝ and their 400 children.
-        '421'#.Tests.Framework.Assert.eq'nodes'infoField⊃⍺ replies'go'
+        ⍝ Depth two from the start position: the root and its 20 children
+        ⍝ are always searched, and pruning skips some of the 400
+        ⍝ positions two moves deep.
+        nodes←⊃2⊃⎕VFI'nodes'infoField⊃⍺ replies'go'
+        #.Tests.Framework.Assert.ok(21<nodes)∧nodes<421
     }
 
     test_go_reports_the_best_move_as_the_principal_variation←{

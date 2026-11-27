@@ -106,6 +106,13 @@
     ⍝ White to move: Qb7, Qa7 and Qh8 all mate.
     MATE_IN_ONE←'k7/7Q/1K6/8/8/8/8/8 w - - 0 1'
 
+    ⍝ Cases are built when the suite is fixed, before Helpers is loaded,
+    ⍝ so they name the start position through this copy.
+    START←'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+
+    ⍝ White to move: exd5 wins the queen.
+    WON_PIECE←'k7/8/8/3q4/4P3/8/8/K7 w - - 0 1'
+
     ⍝ White to move: Rxa7 wins a knight but leaves the back rank open to
     ⍝ Re1 mate.
     BACK_RANK←'4r1k1/n7/8/8/8/8/5PPP/R5K1 w - - 0 1'
@@ -140,7 +147,7 @@
 
     test_scores_a_won_piece←{
         ⍝ exd5 wins the queen; the remaining material is one white pawn.
-        100 #.Tests.Framework.Assert.eq ⍺ score 2 'k7/8/8/3q4/4P3/8/8/K7 w - - 0 1'
+        100 #.Tests.Framework.Assert.eq ⍺ score 2 WON_PIECE
     }
 
     test_best_move_plays_mate_in_one←{
@@ -149,7 +156,7 @@
     }
 
     test_best_move_takes_a_free_queen←{
-        ((#.Tests.Helpers.sqs'e4 d5'),0)#.Tests.Framework.Assert.eq ⍺ best 2 'k7/8/8/3q4/4P3/8/8/K7 w - - 0 1'
+        ((#.Tests.Helpers.sqs'e4 d5'),0)#.Tests.Framework.Assert.eq ⍺ best 2 WON_PIECE
     }
 
     test_best_move_avoids_allowing_mate_in_one←{
@@ -197,17 +204,98 @@
         3 #.Tests.Framework.Assert.eq ⍺ nodes 0 CHECKED
     }
 
+    ⍝ Each case: depth, FEN. The score bestMove reports is the negamax
+    ⍝ score of the position.
+    test_best_move_reports_the_score_of_the_position_cases←(
+        ('won piece'(2 WON_PIECE))
+        ('start position'(3 START))
+        ('back-rank mate threat'(3 BACK_RANK))
+    )
     test_best_move_reports_the_score_of_the_position←{
-        fen←'k7/8/8/3q4/4P3/8/8/K7 w - - 0 1'
-        (⍺ score 2 fen)#.Tests.Framework.Assert.eq 2⊃⍺ bestSearch 2 fen
+        (⍺ score ⍵)#.Tests.Framework.Assert.eq 2⊃⍺ bestSearch ⍵
     }
 
-    test_best_move_counts_the_root_and_every_position_searched←{
-        421 #.Tests.Framework.Assert.eq 3⊃⍺ bestSearch 2 #.Tests.Helpers.START
+    test_best_move_searches_fewer_positions_than_negamax←{
+        #.Tests.Framework.Assert.ok(3⊃⍺ bestSearch 3 #.Tests.Helpers.START)<⍺ nodes 3 #.Tests.Helpers.START
     }
 
     test_best_move_counts_a_checkmated_root_as_one_position←{
         1 #.Tests.Framework.Assert.eq 3⊃⍺ bestSearch 2 'k7/1Q6/1K6/8/8/8/8/8 b - - 0 1'
+    }
+
+    ⍝ alphaBeta
+
+    ⍝ alphaBeta returns (score nodes) like negamax, but skips moves that
+    ⍝ cannot change the result. Given a window (alpha beta), a score
+    ⍝ inside it is exact; a score at or below alpha only shows that the
+    ⍝ true score is at most alpha, and one at or above beta that it is at
+    ⍝ least beta. Without a window the score is exact.
+
+    abSearch←{
+        ⍝ ⍺ ←→ lookup tables
+        ⍝ ⍵ ←→ depth, FEN[, alpha, beta]
+        ⍝ ← ←→ score, nodes
+        depth←⊃⍵
+        fen←2⊃⍵
+        window←2↓⍵
+        ⍺ #.DeepOrange.Search.alphaBeta(depth,position fen),window
+    }
+
+    abScore←{⊃⍺ abSearch ⍵}
+
+    abNodes←{2⊃⍺ abSearch ⍵}
+
+    ⍝ A middlegame position with many captures, checks and castling
+    ⍝ moves for both sides.
+    KIWIPETE←'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1'
+
+    ⍝ Each case: depth, FEN.
+    test_alpha_beta_scores_a_position_as_negamax_does_cases←(
+        ('quiet leaf'(0 'k7/8/8/8/8/8/P7/K7 w - - 0 1'))
+        ('check extension'(0 CHECKED))
+        ('checkmated'(2 'k7/1Q6/1K6/8/8/8/8/8 b - - 0 1'))
+        ('stalemated'(1 'k7/8/1Q6/8/8/8/8/7K b - - 0 1'))
+        ('won piece'(2 WON_PIECE))
+        ('mate in one'(3 MATE_IN_ONE))
+        ('back-rank mate threat'(3 BACK_RANK))
+        ('start position, depth two'(2 START))
+        ('start position, depth three'(3 START))
+        ('middlegame'(2 KIWIPETE))
+    )
+    test_alpha_beta_scores_a_position_as_negamax_does←{
+        (⍺ score ⍵)#.Tests.Framework.Assert.eq ⍺ abScore ⍵
+    }
+
+    ⍝ Each case: depth, FEN.
+    test_alpha_beta_searches_fewer_positions_than_negamax_cases←(
+        ('start position'(3 START))
+        ('back-rank mate threat'(3 BACK_RANK))
+        ('middlegame'(2 KIWIPETE))
+    )
+    test_alpha_beta_searches_fewer_positions_than_negamax←{
+        #.Tests.Framework.Assert.ok(⍺ abNodes ⍵)<⍺ nodes ⍵
+    }
+
+    test_alpha_beta_counts_a_leaf_as_one_position←{
+        1 #.Tests.Framework.Assert.eq ⍺ abNodes 0 'k7/8/8/8/8/8/P7/K7 w - - 0 1'
+    }
+
+    test_alpha_beta_counts_a_checkmated_position_as_one_position←{
+        1 #.Tests.Framework.Assert.eq ⍺ abNodes 2 'k7/1Q6/1K6/8/8/8/8/8 b - - 0 1'
+    }
+
+    ⍝ Windows around the won-piece position, whose depth-two score is 100.
+
+    test_alpha_beta_returns_the_exact_score_inside_the_window←{
+        100 #.Tests.Framework.Assert.eq ⍺ abScore 2 WON_PIECE 99 101
+    }
+
+    test_alpha_beta_returns_at_most_alpha_when_the_score_is_below_the_window←{
+        #.Tests.Framework.Assert.ok 200≥⍺ abScore 2 WON_PIECE 200 300
+    }
+
+    test_alpha_beta_returns_at_least_beta_when_the_score_is_above_the_window←{
+        #.Tests.Framework.Assert.ok 0≤⍺ abScore 2 WON_PIECE ¯100 0
     }
 
 :EndNamespace
